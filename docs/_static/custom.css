@@ -1,0 +1,13 @@
+@font-face {
+      font-family: ASM;
+      src: url("fonts/asm-regular.woff") format("woff");
+}
+@font-face {
+      font-family: ASM;
+      src: url("fonts/asm-bold.woff") format("woff");
+      font-weight: bold;
+}
+@font-face {
+      font-family: "JetBrains Mono";
+      src: url("fonts/jetbrains-mono-regular.woff2") format("woff");
+}
