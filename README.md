@@ -7,6 +7,16 @@
   <br>
 </h1>
 
+<p align="center">
+    <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
+    <a href="https://pepy.tech/project/macedon/">
+      <img alt="Downloads" src="https://pepy.tech/badge/macedon">
+    </a>
+    <a href="https://github.com/psf/black">
+        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
+    </a>
+</p>
+
 Web-service availability verifier. Takes a list of endpoints with optional input dataset and expected output HTTP status codes/responses, performs series of HTTP requests and displays the results.
 
 ## Motivation
