@@ -12,16 +12,16 @@ root_doc = 'index'
 
 # -- Project information ------------------------------------------------------
 
-project = '*PROJECT_NAME'
-copyright = '*CYR, Alexandr Shavykin'
+project = 'macedon'
+copyright = '2022, Alexandr Shavykin'
 author = 'Alexandr Shavykin'
 show_authors = True
 
-github_repository = '*PROJECT_NAME'
+github_repository = 'macedon'
 github_branch     = 'master'
 
-import *PROJECT_NAME
-version = *PROJECT_NAME.__version__
+import macedon
+version = macedon.__version__
 release = version
 
 # -- General configuration ----------------------------------------------------
@@ -48,9 +48,9 @@ rst_prolog = """
 html_theme = 'furo'
 
 if len(version) > 5:
-    html_title = f'*PROJECT_NAME<br>{version}'
+    html_title = f'macedon<br>{version}'
 else:
-    html_title = f'*PROJECT_NAME {version}'
+    html_title = f'macedon {version}'
 
 html_static_path = ['_static']
 html_css_files = ['custom.css', 'custom-furo.css']
@@ -62,7 +62,7 @@ html_theme_options = {
     "footer_icons": [
         {
             "name": "pypi",
-            "url": "https://pypi.org/project/*PROJECT_NAME",
+            "url": "https://pypi.org/project/macedon",
             "html": """
                 <svg width="8.3862762mm" height="7.9437408mm" viewBox="0 0 8.3862762 7.9437408" version="1.1"> 
                     <g transform="translate(-70.327089,-65.242521)"><g transform="matrix(0.26458333,0,0,0.26458333,-104.4515,-52.03226)"> 
@@ -76,7 +76,7 @@ html_theme_options = {
         },
         {
             "name": "github",
-            "url": "https://github.com/*PROJECT_URL",
+            "url": "https://github.com/delameter/macedon",
             "html": """
                 <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>

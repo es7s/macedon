@@ -2,13 +2,13 @@
 
 .. default-role:: any
 
-.. title:: *PROJECT_NAME
+.. title:: macedon
 
 =====================
-*PROJECT_NAME
+macedon
 =====================
 
-*PROJECT_DESCRIPTION
+web service availability verifier
 
 .. toctree::
    :maxdepth: 3

@@ -1,15 +1,16 @@
-## *PROJECT_NAME             ## *PROJECT_DESCRIPTION
-## (C) *CYR                  ## A. Shavykin <0.delameter@gmail.com>
+## macedon   	             ## web service availability verifier
+## (C) 2022                  ## A. Shavykin <0.delameter@gmail.com>
 ##---------------------------##-------------------------------------------------------------
 .ONESHELL:
 .PHONY: help test docs
 
-PROJECT_NAME = *PROJECT_NAME
+PROJECT_NAME = macedon
 PROJECT_NAME_PUBLIC = ${PROJECT_NAME}
 PROJECT_NAME_PRIVATE = ${PROJECT_NAME}-test
 
 HOST_DEFAULT_PYTHON ?= /usr/bin/python
-VENV_DEV_PATH = venv
+VENV_PATH = venv
+VENV_TMP_PATH = /tmp/venv
 
 DOTENV = .env
 DOTENV_DIST = .env.dist
@@ -44,21 +45,34 @@ environment:  ## Show environment vars used by this Makefile
 	echo OUT_COVER_PATH=${PWD}/${OUT_COVER_PATH}
 	echo OUT_DEPS_PATH=${PWD}/${OUT_DEPS_PATH}
 	echo PIPX_DEFAULT_PYTHON=${PIPX_DEFAULT_PYTHON}
-	echo VENV_DEV_PATH=${PWD}/${VENV_DEV_PATH}
+	echo VENV_PATH=${PWD}/${VENV_PATH}
 
 reinit-build:  ## > Prepare environment for module building  <venv>
-	rm -vrf ${VENV_DEV_PATH}
+	rm -vrf ${VENV_PATH}
 	if [ ! -f .env.build ] ; then cp -u ${DOTENV_DIST} ${DOTENV} && sed -i -Ee '/^VERSION=/d' ${DOTENV} ; fi
-	${HOST_DEFAULT_PYTHON} -m venv ${VENV_DEV_PATH}
+	${HOST_DEFAULT_PYTHON} -m venv ${VENV_PATH}
 	${HOST_DEFAULT_PYTHON} -m pip install pipx
-	${VENV_DEV_PATH}/bin/pip install -r requirements.txt -r requirements-dev.txt
-	# ${VENV_DEV_PATH}/bin/python -m ${PROJECT_NAME} --version
+	${VENV_PATH}/bin/pip install -r requirements.txt -r requirements-dev.txt
 
 all:   ## Prepare, run tests, generate docs and reports, build module
 all: reinit-build test coverage build
 
 ##
 ## Pre-build
+
+freeze:  ## Actualize the requirements.txt file(s)
+	mkdir -p ${VENV_TMP_PATH}
+	${HOST_DEFAULT_PYTHON} -m venv ${VENV_TMP_PATH}
+	${VENV_TMP_PATH}/bin/pip install -r requirements.txt
+	${VENV_TMP_PATH}/bin/pip freeze -r requirements.txt --all > requirements.txt.tmp
+	sed -i -Ee '/were added by pip/ s/.+//' requirements.txt.tmp
+	mv -v requirements.txt.tmp requirements.txt
+	rm -vrf ${VENV_TMP_PATH} | wc -l | tr -d '\n' && echo " files purged in ${VENV_TMP_PATH}"
+
+freeze-dev:  ## Actualize the requirements-dev.txt file(s)  <venv>
+	${VENV_PATH}/bin/pip freeze -r requirements-dev.txt --all --exclude-editable > requirements-dev.txt.tmp
+	sed -i -Ee '/were added by pip/ s/.+//' requirements-dev.txt.tmp
+	mv requirements-dev.txt.tmp requirements-dev.txt
 
 demolish-build:  ## Delete build output folders
 	rm -f -v ${OUT_BUILD_RELEASE_PATH}/* ${PROJECT_NAME_PUBLIC}.egg-info/* ${PROJECT_NAME_PRIVATE}.egg-info/*
@@ -78,7 +92,7 @@ set-version: show-version
 depends:  ## Build and display module dependency graph
 	rm -vrf ${OUT_DEPS_PATH}
 	mkdir -p ${OUT_DEPS_PATH}
-	./pydeps.sh ${VENV_DEV_PATH}/bin/pydeps ${PROJECT_NAME} ${OUT_DEPS_PATH}
+	./pydeps.sh ${VENV_PATH}/bin/pydeps ${PROJECT_NAME} ${OUT_DEPS_PATH}
 
 purge-cache:  ## Clean up pycache
 	find . -type d \( -name __pycache__ -or -name .pytest_cache \) -print -exec rm -rf {} +
@@ -87,20 +101,20 @@ purge-cache:  ## Clean up pycache
 ## Testing
 
 test: ## Run pytest
-	${VENV_DEV_PATH}/bin/pytest tests
+	${VENV_PATH}/bin/pytest tests
 
 test-verbose: ## Run pytest with detailed output
-	${VENV_DEV_PATH}/bin/pytest tests -v
+	${VENV_PATH}/bin/pytest tests -v
 
 test-debug: ## Run pytest with VERY detailed output
-	${VENV_DEV_PATH}/bin/pytest tests -v --log-file-level=DEBUG --log-file=logs/testrun.${NOW}.log
+	${VENV_PATH}/bin/pytest tests -v --log-file-level=DEBUG --log-file=logs/testrun.${NOW}.log
 	if command -v bat &>/dev/null ; then bat logs/testrun.${NOW}.log -n --wrap=never ; else less logs/testrun.${NOW}.log ; fi
 
 coverage: ## Run coverage and make a report
 	rm -vrf ${OUT_COVER_PATH}
-	${VENV_DEV_PATH}/bin/python -m coverage run tests -vv
-	${VENV_DEV_PATH}/bin/coverage report
-	${VENV_DEV_PATH}/bin/coverage html
+	${VENV_PATH}/bin/python -m coverage run tests -vv
+	${VENV_PATH}/bin/coverage report
+	${VENV_PATH}/bin/coverage html
 	if [ -n $$DISPLAY ] ; then xdg-open ${OUT_COVER_PATH}/index.html ; fi
 
 ##
@@ -117,11 +131,11 @@ reinstall-local:  ## > (Re)install as editable, inject latest deps  <pipx>
 build-dev: ## Create new private build  <*-test>
 build-dev: demolish-build
 	sed -E -i "s/^name.+/name = ${PROJECT_NAME_PRIVATE}/" setup.cfg
-	${VENV_DEV_PATH}/bin/python -m build --outdir ${OUT_BUILD_DEV_PATH}
+	${VENV_PATH}/bin/python -m build --outdir ${OUT_BUILD_DEV_PATH}
 	sed -E -i "s/^name.+/name = ${PROJECT_NAME_PUBLIC}/" setup.cfg
 
 upload-dev: ## Upload last private build (=> dev registry)
-	${VENV_DEV_PATH}/bin/twine \
+	${VENV_PATH}/bin/twine \
 	    upload \
 	    --repository testpypi \
 	    -u ${PYPI_USERNAME} \
@@ -137,10 +151,10 @@ install-dev: ## Install latest private build from dev registry
 
 build: ## Create new *public* build
 build: demolish-build
-	${VENV_DEV_PATH}/bin/python -m build
+	${VENV_PATH}/bin/python -m build
 
 upload: ## Upload last *public* build (=> PRIMARY registry)
-	${VENV_DEV_PATH}/bin/twine \
+	${VENV_PATH}/bin/twine \
 	    upload \
 	    -u ${PYPI_USERNAME} \
 	    -p ${PYPI_PASSWORD} \

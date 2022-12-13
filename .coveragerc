@@ -1,12 +1,12 @@
 [run]
 source =
-    *PROJECT_NAME
+    macedon
 
 branch = True
 omit =
     */__init__.py
-    *PROJECT_NAME/__main__.py
-    *PROJECT_NAME/_version.py
+    macedon/__main__.py
+    macedon/_version.py
 
 dynamic_context = test_function
 
@@ -32,4 +32,4 @@ ignore_errors = True
 
 [html]
 directory = coverage
-title = *PROJECT_NAME coverage report
+title = macedon coverage report
