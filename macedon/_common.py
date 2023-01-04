@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 #  macedon [CLI web service availability verifier]
-#  (c) 2023. A. Shavykin <0.delameter@gmail.com>
+#  (c) 2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 from dataclasses import dataclass
 from threading import Lock
