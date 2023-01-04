@@ -17,7 +17,7 @@
     </a>
 </p>
 
-Web-service availability verifier. Takes a list of endpoints with optional input dataset and expected output HTTP status codes/responses, performs series of HTTP requests and displays the results.
+CLI web service availability verifier. Takes a list of endpoints with optional input dataset and expected output HTTP status codes/responses, performs series of HTTP requests and displays the results.
 
 ## Motivation
 

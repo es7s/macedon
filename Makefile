@@ -1,4 +1,4 @@
-## macedon   	             ## web service availability verifier
+## macedon                   ## CLI web service availability verifier
 ## (C) 2022                  ## A. Shavykin <0.delameter@gmail.com>
 ##---------------------------##-------------------------------------------------------------
 .ONESHELL:
