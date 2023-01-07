@@ -95,7 +95,10 @@ class Printer:
         req_failed = self._shared_state.requests_failed.value
         success_st = self.SUCCESS_ST if req_success == req_total else None
         failed_st = self.FAILURE_ST if req_failed > 0 else None
-        avg_latency = pt.utilmisc.median(self._shared_state.requests_latency)
+        avg_latency_fmtd = pt.Text('---', self.NO_VAL_ST, width=5, align="right")
+        if self._shared_state.requests_latency:
+            avg_latency = pt.utilmisc.median(self._shared_state.requests_latency)
+            avg_latency_fmtd = self._format_elapsed(timedelta(seconds=avg_latency))
 
         self._reset_cursor_x()
         self._print_separator()
@@ -114,7 +117,7 @@ class Printer:
             pt.Text(width=2),
             pt.Text(f"Avg time:", width=12),
             pt.Text(width=1),
-            self._format_elapsed(timedelta(seconds=avg_latency)),
+            avg_latency_fmtd,
         )
         self._print_row(
             pt.Text(width=2),
