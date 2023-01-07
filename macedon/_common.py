@@ -2,7 +2,6 @@
 #  macedon [CLI web service availability verifier]
 #  (c) 2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
-import queue
 from dataclasses import dataclass, field
 from threading import Lock
 

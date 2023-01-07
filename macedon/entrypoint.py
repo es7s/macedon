@@ -25,10 +25,7 @@ def invoke():
 
 
 class ClickCommand(click.Command):
-    def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        pieces = self.collect_usage_pieces(ctx)
-        formatter.write_usage(ctx.command_path, "|".join(pieces))
-
+    pass
 
 @click.command(
     cls=ClickCommand,
