@@ -60,6 +60,7 @@ class FileParser:
                 body_lines = lines[last_empty_idx:]
                 body = "".join(body_lines)
                 logger.debug(f"Found body ({len(body_lines)} lines, {len(body)} chars)")
+
             yield Task(url, method, headers, body)
 
     def _filter_jb_http_file_lines(
@@ -92,7 +93,7 @@ class FileParser:
             get_logger().debug(f"Found method and url: {result}")
             return result
         raise ValueError(
-            f"Invalid format, expected '{{method}} {{url}}', got: '{line}'"
+            f"Invalid format, expected '{{method}} http(s)?://{{url}}', got: '{line}'"
         )
 
     def _extract_headers(self, lines: list[str]) -> t.Iterable[tuple[str, str]]:

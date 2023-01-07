@@ -2,7 +2,8 @@
 #  macedon [CLI web service availability verifier]
 #  (c) 2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
-from dataclasses import dataclass
+import queue
+from dataclasses import dataclass, field
 from threading import Lock
 
 from requests.structures import CaseInsensitiveDict
@@ -32,7 +33,7 @@ class Options:
     timeout: float
     verbose: int
     show_id: bool
-    show_count: bool
+    show_error: bool
 
 
 @dataclass(frozen=True)
@@ -50,3 +51,6 @@ class SharedState:
     requests_printed = ThreadSafeCounter()
     requests_success = ThreadSafeCounter()
     requests_failed = ThreadSafeCounter()
+    requests_latency: list[float] = field(default_factory=list)
+    methods = set()
+    worker_states: list[str] = None

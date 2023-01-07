@@ -17,9 +17,9 @@ from .worker import Worker
 
 
 class Synchronizer:
-    def __init__(self, url_args: tuple[str], file: tuple[click.File], options: Options):
+    def __init__(self, url_args: tuple[str], file: tuple[click.File], options: Options, shared_state: SharedState):
         self._options = options
-        self._shared_state = SharedState()
+        self._shared_state = shared_state
         self._task_pool = Queue[Task]()
         self._workers = []
 
@@ -27,52 +27,20 @@ class Synchronizer:
         self._init_workers()
 
     def run(self):
-        total = self._shared_state.requests_total.value
-        sep = pt.String('-'*30)
-        get_printer().print_row(
-            pt.String(f" Requests amount: "),
-            pt.String(str(total), pt.Style(bold=True)),
-        )
-        get_printer().print_row(sep)
+        printer = get_printer()
+        printer.print_prolog()
         time_before = time_after = time.time_ns()
+
         for worker in self._workers:
             get_logger().debug(f"Starting worker {worker}")
             worker.start()
         for worker in self._workers:
             worker.join()
-        time_after = time.time_ns()
 
-        success = self._shared_state.requests_success.value
-        failed = self._shared_state.requests_failed.value
-        time_total = time_after - time_before
-        get_printer().print_row(sep)
-        get_printer().print_row(
-            pt.FixedString(f" Successful: "),
-            pt.FixedString(
-                str(success),
-                "green" if success == total else None,
-                width=6,
-                align=pt.Align.RIGHT,
-            ),
-        )
-        get_printer().print_row(
-            pt.FixedString(f" Failed:     "),
-            pt.FixedString(
-                str(failed),
-                "red" if failed > 0 else None,
-                width=6,
-                align=pt.Align.RIGHT,
-            ),
-            pt.FixedString(f"  ({100*failed/total:.1f}%)"),
-        )
-        get_printer().print_row(
-            pt.FixedString(f" Avg time:   "),
-            get_printer().format_elapsed(time_total / total),
-        )
-        get_printer().print_row(
-            pt.FixedString(f" Total time: "),
-            get_printer().format_elapsed(time_total),
-        )
+        time_after = time.time_ns()
+        self._shared_state.requests_latency.sort()
+        printer.print_epilog(time_after - time_before)
+
 
     def _init_task_queue(self, url_args: tuple[str], file: tuple[click.File]):
         for file_inst in file:
@@ -90,11 +58,13 @@ class Synchronizer:
             self._append_task(Task(url))
 
     def _append_task(self, task: Task):
+        self._shared_state.methods.add(task.method)
         for _ in range(self._options.amount):
             self._task_pool.put_nowait(task)
             self._shared_state.requests_total.next()
 
     def _init_workers(self):
+        self._shared_state.worker_states = ["init"]*self._options.threads
         for idx in range(self._options.threads):
             self._workers.append(
                 Worker(self._options, self._task_pool, idx, self._shared_state)
