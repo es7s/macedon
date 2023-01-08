@@ -21,18 +21,17 @@ VERBOSITY_LOG_LEVELS = {
 
 
 class SgrFormatter(logging.Formatter):
+    LEVEL_TO_FMT_MAP: dict[int, pt.FT] = {
+        logging.DEBUG: pt.cv.CYAN,
+        logging.INFO: pt.cv.WHITE,
+        logging.WARNING: pt.cv.YELLOW,
+        logging.ERROR: pt.cv.RED,
+        logging.CRITICAL: pt.cv.HI_RED,
+    }
+
     def format(self, record: LogRecord) -> str:
         result = super().format(record)
-        fmt = pt.NOOP_STYLE
-        match record.levelno:
-            case logging.DEBUG:
-                fmt = pt.cv.CYAN
-            case logging.INFO:
-                fmt = pt.cv.WHITE
-            case logging.WARNING:
-                fmt = pt.cv.YELLOW
-            case logging.ERROR:
-                fmt = pt.cv.RED
+        fmt = self.LEVEL_TO_FMT_MAP.get(record.levelno, pt.NOOP_STYLE)
         return get_stderr().render(result, fmt)
 
 
