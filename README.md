@@ -27,20 +27,7 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
 
 ## Basic usage
 
-    > macedon localhost:5000 -n3
-
-    Threads:         1
-    Requests:        3
-    -------------------------
-    200  1.6kb  6.0ms  GET http://localhost:80
-    200  1.6kb  4.0ms  GET http://localhost:80
-    200  1.6kb  3.7ms  GET http://localhost:80
-    -------------------------
-    Successful:      3
-    Failed:          0  (0.0%)
-    Avg time:    4.0ms
-    Total time:   37ms
-
+![image](https://user-images.githubusercontent.com/50381946/211187585-2e932cde-f8f6-4d91-9769-962b6efdfe07.png)
 
 ## Configuration / Advanced usage
 
