@@ -55,6 +55,7 @@ class Printer:
             pt.Text(str(req_total), pt.Style(bold=True), width=6, align="right"),
         )
         self._print_separator()
+        self._print_progress(True)
 
     def print_response(self, task: Task, response: requests.Response, request_id: int):
         size = 0
@@ -95,7 +96,7 @@ class Printer:
         req_failed = self._shared_state.requests_failed.value
         success_st = self.SUCCESS_ST if req_success == req_total else None
         failed_st = self.FAILURE_ST if req_failed > 0 else None
-        avg_latency_fmtd = pt.Text('---', self.NO_VAL_ST, width=5, align="right")
+        avg_latency_fmtd = pt.Text("---", self.NO_VAL_ST, width=5, align="right")
         if self._shared_state.requests_latency:
             avg_latency = pt.utilmisc.median(self._shared_state.requests_latency)
             avg_latency_fmtd = self._format_elapsed(timedelta(seconds=avg_latency))
@@ -132,11 +133,13 @@ class Printer:
         result = self._request_table.pass_row(*filter(None, vals))
         get_stdout().echo_rendered(result)
 
-    def _print_progress(self):
+    def _print_progress(self, pre: bool = False):
+        if not self._is_format_allowed:
+            return
         self._print_row(
             pt.Text("[", width=3, align="center"),
-            self._format_progress(),
-            self._format_request_count(),
+            self._format_progress(pre),
+            self._format_request_count(pre),
             pt.Text("]", width=3, align="center"),
             newline=False,
         )
@@ -150,6 +153,8 @@ class Printer:
         self._print_row(pt.Text(width=25, fill="-"))
 
     def _reset_cursor_x(self):
+        if not self._is_format_allowed:
+            return
         get_stdout().echo(pt.ansi.make_set_cursor_x_abs(1).assemble(), newline=False)
 
     def _get_output_mode(self, opt_color: bool | None) -> pt.OutputMode:
@@ -160,7 +165,7 @@ class Printer:
         return pt.OutputMode.NO_ANSI
 
     @property
-    def _is_color_allowed(self) -> bool:
+    def _is_format_allowed(self) -> bool:
         return get_stdout().renderer.is_format_allowed
 
     def _get_max_req_id_length(self) -> int:
@@ -191,7 +196,7 @@ class Printer:
                 allow_negative=False,
                 discrete_input=True,
                 pad=True,
-                color=self._is_color_allowed,
+                color=self._is_format_allowed,
             )
         return self._size_formatter.format(size)
 
@@ -203,7 +208,7 @@ class Printer:
                 unit="s",
                 unit_separator="",
                 pad=True,
-                color=self._is_color_allowed,
+                color=self._is_format_allowed,
             )
         if isinstance(elapsed, (int, float)):
             seconds = elapsed / 1e9
@@ -223,15 +228,7 @@ class Printer:
         max_width = self._get_max_req_id_length() + len(str(label.string))
         return pt.Text(label, result, width=max_width, align="right")
 
-    def _format_request_count(self) -> pt.Text:
-        current = self._shared_state.requests_printed.value + 1
-        total = self._shared_state.requests_total.value
-        max_id_width = self._get_max_req_id_length()
-        label = " "
-        result = f"{label}{current:>{max_id_width}d}/{total:<{max_id_width}d}"
-        return pt.Text(result, width=max_id_width * 2 + len(str(label)) + 1)
-
-    def _format_progress(self) -> pt.Text:
+    def _format_progress(self, pre: bool = False) -> pt.Text:
         if not self._progress_formatter:
             self._progress_formatter = pt.StaticBaseFormatter(
                 max_value_len=3,
@@ -241,17 +238,25 @@ class Printer:
                 unit="%",
                 pad=True,
                 prefixes=[None, ""],
-                color=self._is_color_allowed,
+                color=self._is_format_allowed,
             )
         original_val = (
             100
-            * (self._shared_state.requests_printed.value + 1)
+            * (self._shared_state.requests_printed.value + (0 if pre else 1))
             / self._shared_state.requests_total.value
         )
         if original_val <= 1:
             original_val = 0.00
         result = self._progress_formatter.format(original_val)
         return result
+
+    def _format_request_count(self, pre: bool = False) -> pt.Text:
+        current = self._shared_state.requests_printed.value + (0 if pre else 1)
+        total = self._shared_state.requests_total.value
+        max_id_width = self._get_max_req_id_length()
+        label = " "
+        result = f"{label}{current:>{max_id_width}d}/{total:<{max_id_width}d}"
+        return pt.Text(result, width=max_id_width * 2 + len(str(label)) + 1)
 
     def _format_url(
         self, url: str, method: str, exception: Exception | None
