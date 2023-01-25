@@ -3,29 +3,49 @@
 #  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 import os
+import signal
 import sys
+import threading
 
 import click
-import pytermor as pt
 import urllib3
-from click import Context, HelpFormatter
 from urllib3.exceptions import InsecureRequestWarning
 
+import pytermor as pt
 from . import APP_NAME, APP_VERSION
-from ._common import Options, SharedState
+from ._common import Options, init_state, get_state
 from .fileparser import init_parser
 from .io import init_io
 from .logger import init_loggers, get_logger
-from .printer import init_printer
+from .printer import init_printer, get_printer
 from .synchronizer import Synchronizer
+
+_shutdown_started = False
 
 
 def invoke():
+    signal.signal(signal.SIGINT, exit_gracefully)
+    signal.signal(signal.SIGTERM, exit_gracefully)
     callback()
+
+
+def shutdown():
+    global _shutdown_started
+    _shutdown_started = True
+    get_state().shutdown_flag.set()
+    get_printer().print_shutdown()
+
+def exit_gracefully(signal_code: int, *args):
+    get_logger().debug(f"{signal.Signals(signal_code).name} ({signal_code}) received")
+    if not _shutdown_started:
+        shutdown()
+        return
+    os._exit(0)
 
 
 class ClickCommand(click.Command):
     pass
+
 
 @click.command(
     cls=ClickCommand,
@@ -37,7 +57,7 @@ class ClickCommand(click.Command):
     "-T",
     "--threads",
     type=int,
-    default=1,
+    default=4,
     show_default=True,
     help="Number of threads for concurrent request making.",
 )
@@ -101,21 +121,18 @@ class ClickCommand(click.Command):
     default=0,
     help="Display detailed info on every request.",
 )
-@click.pass_context
-def callback(
-    ctx: click.Context, endpoint_url: tuple[str], file: tuple[click.File], **kwargs
-):
+def callback(endpoint_url: tuple[str], file: tuple[click.File], **kwargs):
     options = Options(**kwargs)
-    shared_state = SharedState()
     urllib3.disable_warnings(InsecureRequestWarning)
 
+    init_state(options)
     init_io(options)
     init_loggers(options)
     _log_init_info(options)
 
     init_parser()
-    init_printer(options, shared_state)
-    sync = Synchronizer(endpoint_url, file, options, shared_state)
+    init_printer()
+    sync = Synchronizer(endpoint_url, file)
     sync.run()
 
 

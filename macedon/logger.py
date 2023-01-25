@@ -3,13 +3,10 @@
 #  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 import logging
-import os
 import sys
 from logging import LogRecord
-from os import P_PID
 
 import pytermor as pt
-
 from ._common import Options
 from .io import get_stderr
 
@@ -20,22 +17,12 @@ VERBOSITY_LOG_LEVELS = {
 }
 
 
-class SgrFormatter(logging.Formatter):
-    LEVEL_TO_FMT_MAP: dict[int, pt.FT] = {
-        logging.DEBUG: pt.cv.CYAN,
-        logging.INFO: pt.cv.WHITE,
-        logging.WARNING: pt.cv.YELLOW,
-        logging.ERROR: pt.cv.RED,
-        logging.CRITICAL: pt.cv.HI_RED,
-    }
-
-    def format(self, record: LogRecord) -> str:
-        result = super().format(record)
-        fmt = self.LEVEL_TO_FMT_MAP.get(record.levelno, pt.NOOP_STYLE)
-        return get_stderr().render(result, fmt)
+_logger: logging.Logger | None = None
 
 
 def get_logger():
+    if _logger is None:
+        raise Exception("Logger should be initialized")
     return _logger
 
 
@@ -70,4 +57,16 @@ def init_loggers(options: Options):
     return _logger
 
 
-_logger: logging.Logger | None = None
+class SgrFormatter(logging.Formatter):
+    LEVEL_TO_FMT_MAP: dict[int, pt.FT] = {
+        logging.DEBUG: pt.cv.CYAN,
+        logging.INFO: pt.cv.WHITE,
+        logging.WARNING: pt.cv.YELLOW,
+        logging.ERROR: pt.cv.RED,
+        logging.CRITICAL: pt.cv.HI_RED,
+    }
+
+    def format(self, record: LogRecord) -> str:
+        result = super().format(record)
+        fmt = self.LEVEL_TO_FMT_MAP.get(record.levelno, pt.NOOP_STYLE)
+        return get_stderr().render(result, fmt)

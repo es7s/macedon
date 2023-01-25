@@ -2,14 +2,12 @@
 #  macedon [CLI web service availability verifier]
 #  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
-import threading
 import time
 from queue import Queue
 
 import click
-import pytermor as pt
 
-from ._common import Options, Task, SharedState
+from ._common import Options, Task, State, get_state
 from .fileparser import get_parser
 from .logger import get_logger
 from .printer import get_printer
@@ -21,13 +19,9 @@ class Synchronizer:
         self,
         url_args: tuple[str],
         file: tuple[click.File],
-        options: Options,
-        shared_state: SharedState,
     ):
-        self._options = options
-        self._shared_state = shared_state
-        self._task_pool = Queue[Task]()
-        self._workers = []
+        self._task_pool: Queue[Task] = Queue[Task]()
+        self._workers: list[Worker] = []
 
         try:
             self._init_task_queue(url_args, file)
@@ -48,7 +42,7 @@ class Synchronizer:
             worker.join()
 
         time_after = time.time_ns()
-        self._shared_state.requests_latency.sort()
+        get_state().requests_latency.sort()
         printer.print_epilog(time_after - time_before)
 
     def _init_task_queue(self, url_args: tuple[str], file: tuple[click.File]):
@@ -58,7 +52,7 @@ class Synchronizer:
                     self._append_task(task)
             except Exception as e:
                 get_logger().error(f"Failed to parse the file '{file}': {e}")
-        if self._shared_state.requests_total.value > 0:
+        if get_state().requests_total.value > 0:
             return
 
         for url in url_args:
@@ -66,18 +60,21 @@ class Synchronizer:
                 url = f"http://{url}"
             self._append_task(Task(url))
 
-        if self._shared_state.requests_total.value == 0:
+        if get_state().requests_total.value == 0:
             raise ValueError("No urls provided")
 
     def _append_task(self, task: Task):
-        self._shared_state.methods.add(task.method)
-        for _ in range(self._options.amount):
+        state = get_state()
+
+        state.used_methods.add(task.method)
+        for _ in range(state.options.amount):
             self._task_pool.put_nowait(task)
-            self._shared_state.requests_total.next()
+            state.requests_total.next()
 
     def _init_workers(self):
-        self._shared_state.worker_states = ["init"] * self._options.threads
-        for idx in range(self._options.threads):
-            self._workers.append(
-                Worker(self._options, self._task_pool, idx, self._shared_state)
-            )
+        state = get_state()
+        threads = state.options.threads
+
+        state.worker_states = ["init"] * threads
+        for idx in range(threads):
+            self._workers.append(Worker(self._task_pool, idx))

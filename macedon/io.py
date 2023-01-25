@@ -16,19 +16,17 @@ _stderr: IoProxy | None = None
 
 
 def get_stdout(require=True) -> IoProxy | None:
-    global _stdout
     if not _stdout:
         if require:
-            raise RuntimeError("Stdout proxy is uninitialized")
+            raise Exception("Stdout proxy is not initialized")
         return None
     return _stdout
 
 
 def get_stderr(require=True) -> IoProxy | None:
-    global _stderr
     if not _stderr:
         if require:
-            raise RuntimeError("Stderr proxy is uninitialized")
+            raise Exception("Stderr proxy is not initialized")
         return None
     return _stderr
 

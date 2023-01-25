@@ -2,18 +2,34 @@
 #  macedon [CLI web service availability verifier]
 #  (c) 2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
+from __future__ import annotations
+
 import re
-import sys
-import threading
+import typing
 from datetime import timedelta
+import threading as th
+
+import requests
 
 import pytermor as pt
-import requests
 from pytermor import RT, Fragment
-
-from ._common import Task, SharedState, Options
+from ._common import Task, get_state, State
 from .io import get_stdout
 from .logger import get_logger
+
+_printer: Printer | None = None
+
+
+def get_printer() -> Printer:
+    if _printer is None:
+        raise Exception("Printer should be initialized")
+    return _printer
+
+
+def init_printer() -> Printer:
+    global _printer
+    _printer = Printer()
+    return _printer
 
 
 class Printer:
@@ -24,26 +40,30 @@ class Printer:
 
     SUCCESS_ST = pt.Style(fg=pt.cv.GREEN, bold=True)
     FAILURE_ST = pt.Style(fg=pt.cv.RED, bold=True)
-    ERROR_ST = pt.Style(fg=pt.cv.RED, dim=True)
-    REQUEST_ID_ST = pt.Style(fg=pt.cv.YELLOW)
+    ERROR_ST = pt.Style(fg=pt.cv.RED)
+    REQUEST_ID_ST = pt.Style(fg=pt.cv.YELLOW, bold=True)
+    REQUEST_ID_LABEL_ST = pt.Style(fg=pt.cv.YELLOW, dim=True)
     NO_VAL_ST = pt.Style(fg=pt.cv.GRAY_23)
-    METHOD_ST = pt.Style(bold=True)
+    METHOD_OK_ST = pt.Style(bold=True)
+    METHOD_NOK_ST = pt.Style(METHOD_OK_ST, fg=pt.cv.GRAY_23)
+    URL_OK_ST = pt.NOOP_STYLE
+    URL_NOK_ST = pt.Style(URL_OK_ST, fg=pt.cv.GRAY_23)
 
-    def __init__(self, options: Options, shared_state: SharedState):
-        self._options = options
-        self._shared_state = shared_state
-        self._lock = threading.Lock()
-        self._request_table = pt.SimpleTable(sep=pt.pad(self.COLUMN_PAD))
-        self._progress_table = pt.SimpleTable(sep="")
+    def __init__(self):
+        self._state: State = get_state()
+        self._lock: th.Lock = th.Lock()
+        self._request_table: pt.SimpleTable = pt.SimpleTable(
+            sep=pt.pad(self.COLUMN_PAD)
+        )
+        self._progress_table: pt.SimpleTable = pt.SimpleTable(sep="")
 
-        self._size_formatter = None
-        self._elapsed_formatter = None
-        self._request_id_formatter = None
-        self._progress_formatter = None
+        self._size_formatter: pt.StaticBaseFormatter | None = None
+        self._elapsed_formatter: pt.StaticBaseFormatter | None = None
+        self._progress_formatter: pt.StaticBaseFormatter | None = None
 
     def print_prolog(self):
-        req_total = self._shared_state.requests_total.value
-        threads = self._options.threads
+        req_total = self._state.requests_total.value
+        threads = self._state.options.threads
         self._print_row(
             pt.Text(width=2),
             pt.Text(f"Threads:", width=12),
@@ -57,7 +77,9 @@ class Printer:
         self._print_separator()
         self._print_progress(True)
 
-    def print_response(self, task: Task, response: requests.Response, request_id: int):
+    def print_completed_request(
+        self, task: Task, response: requests.Response, request_id: int
+    ):
         size = 0
         try:
             size = len(response.content)
@@ -70,35 +92,47 @@ class Printer:
             self._format_size(size),
             self._format_elapsed(response.elapsed),
             self._format_request_id(request_id),
-            self._format_url(task.url, task.method, None),
+            self._format_url(task.url, task.method, response.ok),
         )
         self._print_progress()
-        self._shared_state.requests_printed.next()
+        self._state.requests_printed.next()
         self._lock.release()
 
     def print_failed_request(
-        self, task: Task, time_ns: int | float, request_id: int, exception: Exception
+        self,
+        task: Task,
+        time_ns: int | float,
+        request_id: int,
+        exception: Exception,
     ):
         self._lock.acquire()
         self._print_request_result(
             self._format_error(exception),
             self._format_elapsed(time_ns),
             self._format_request_id(request_id),
-            self._format_url(task.url, task.method, exception),
+            self._format_url(task.url, task.method, False, exception),
         )
         self._print_progress()
-        self._shared_state.requests_printed.next()
+        self._state.requests_printed.next()
+        self._lock.release()
+
+    def print_shutdown(self):
+        msg = pt.Text(
+            "Shutting threads down (Ctrl+C again to force)", pt.Styles.WARNING
+        )
+        self._lock.acquire()
+        self._print_row(msg)
         self._lock.release()
 
     def print_epilog(self, time_delta_ns: int):
-        req_total = self._shared_state.requests_total.value
-        req_success = self._shared_state.requests_success.value
-        req_failed = self._shared_state.requests_failed.value
+        req_total = self._state.requests_total.value
+        req_success = self._state.requests_success.value
+        req_failed = self._state.requests_failed.value
         success_st = self.SUCCESS_ST if req_success == req_total else None
         failed_st = self.FAILURE_ST if req_failed > 0 else None
         avg_latency_fmtd = pt.Text("---", self.NO_VAL_ST, width=5, align="right")
-        if self._shared_state.requests_latency:
-            avg_latency = pt.utilmisc.median(self._shared_state.requests_latency)
+        if self._state.requests_latency:
+            avg_latency = pt.utilmisc.median(self._state.requests_latency)
             avg_latency_fmtd = self._format_elapsed(timedelta(seconds=avg_latency))
 
         self._reset_cursor_x()
@@ -116,7 +150,7 @@ class Printer:
         )
         self._print_row(
             pt.Text(width=2),
-            pt.Text(f"Avg time:", width=12),
+            pt.Text(f"Avg (p50):", width=12),
             pt.Text(width=1),
             avg_latency_fmtd,
         )
@@ -144,13 +178,13 @@ class Printer:
             newline=False,
         )
 
+    def _print_separator(self):
+        self._print_row(pt.Text(width=25, fill="-"))
+
     def _print_row(self, *vals: pt.IRenderable, newline: bool = True):
         stdout = get_stdout()
         result = self._progress_table.pass_row(*vals)
         stdout.echo(stdout.render(result), newline=newline)
-
-    def _print_separator(self):
-        self._print_row(pt.Text(width=25, fill="-"))
 
     def _reset_cursor_x(self):
         if not self._is_format_allowed:
@@ -169,7 +203,7 @@ class Printer:
         return get_stdout().renderer.is_format_allowed
 
     def _get_max_req_id_length(self) -> int:
-        return len(str(self._shared_state.requests_total.value))
+        return len(str(self._state.requests_total.value))
 
     def _format_no_val(self, width: int) -> pt.Text:
         return pt.Text("---", self.NO_VAL_ST, width=width, align="center")
@@ -220,10 +254,10 @@ class Printer:
         return self._elapsed_formatter.format(seconds)
 
     def _format_request_id(self, request_id: int) -> pt.Text:
-        if not self._options.show_id:
+        if not self._state.options.show_id:
             return pt.Text(width=0)
 
-        label = Fragment("#")
+        label = Fragment("#", self.REQUEST_ID_LABEL_ST)
         result = Fragment(f"{request_id:>d}", self.REQUEST_ID_ST)
         max_width = self._get_max_req_id_length() + len(str(label.string))
         return pt.Text(label, result, width=max_width, align="right")
@@ -242,8 +276,8 @@ class Printer:
             )
         original_val = (
             100
-            * (self._shared_state.requests_printed.value + (0 if pre else 1))
-            / self._shared_state.requests_total.value
+            * (self._state.requests_printed.value + (0 if pre else 1))
+            / self._state.requests_total.value
         )
         if original_val <= 1:
             original_val = 0.00
@@ -251,21 +285,23 @@ class Printer:
         return result
 
     def _format_request_count(self, pre: bool = False) -> pt.Text:
-        current = self._shared_state.requests_printed.value + (0 if pre else 1)
-        total = self._shared_state.requests_total.value
+        current = self._state.requests_printed.value + (0 if pre else 1)
+        total = self._state.requests_total.value
         max_id_width = self._get_max_req_id_length()
         label = " "
         result = f"{label}{current:>{max_id_width}d}/{total:<{max_id_width}d}"
         return pt.Text(result, width=max_id_width * 2 + len(str(label)) + 1)
 
     def _format_url(
-        self, url: str, method: str, exception: Exception | None
+        self, url: str, method: str, ok: bool, exception: Exception = None
     ) -> pt.Text:
-        method_len = max(len(m) for m in self._shared_state.methods)
+        method_len = max(len(m) for m in self._state.used_methods)
         error = pt.Fragment(self._get_error_msg(exception), self.ERROR_ST)
+        method_st = self.METHOD_OK_ST if ok else self.METHOD_NOK_ST
+        url_st = self.URL_OK_ST if ok else self.URL_NOK_ST
         result = [
-            pt.Fragment(f"{method:>{method_len}.{method_len}s} ", self.METHOD_ST),
-            pt.Fragment(url + pt.pad(2)),
+            pt.Fragment(f"{method:>{method_len}.{method_len}s} ", method_st),
+            pt.Fragment(url + pt.pad(2), url_st),
             error,
         ]
         return pt.Text(*result)
@@ -276,24 +312,20 @@ class Printer:
         return str(exception.__class__.__qualname__)
 
     def _get_error_msg(self, exception: Exception | None) -> str:
-        if not self._options.show_error:
+        if not self._state.options.show_error:
             return ""
         if not exception:
             return ""
         if "Errno" in (exception_str := str(exception)):
             return re.search(r"\[Errno -?\d+][^)\']+", exception_str).group() or ""
-        return ""
-
-
-def get_printer() -> Printer:
-    return _printer
-
-
-def init_printer(options: Options, shared_state: SharedState) -> Printer:
-    global _printer
-    _printer = Printer(options, shared_state)
-
-    return _printer
-
-
-_printer: Printer | None = None
+        if (
+            hasattr(exception, "args")
+            and isinstance(exception.args, typing.Sequence)
+            and len(exception.args) > 0
+        ):
+            if isinstance(subexception := exception.args[0], Exception):
+                return self._get_error_msg(subexception)
+            if hasattr(exception, "reason") and (reason := exception.reason):
+                return str(reason)
+            return str(subexception)
+        return exception.__class__.__qualname__

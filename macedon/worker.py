@@ -6,12 +6,12 @@ import threading as t
 import time
 from queue import Queue, Empty
 
-import pytermor as pt
 import requests
 import urllib3.exceptions
 from requests import Response
 
-from ._common import Options, Task, SharedState
+import pytermor as pt
+from ._common import Options, Task, get_state, State
 from .logger import get_logger
 from .printer import get_printer
 
@@ -19,15 +19,12 @@ from .printer import get_printer
 class Worker(t.Thread):
     def __init__(
         self,
-        options: Options,
         task_pool: Queue[Task],
         idx: int,
-        shared_state: SharedState,
     ):
-        self._options = options
-        self._task_pool = task_pool
-        self._idx = idx
-        self._shared_state = shared_state
+        self._state: State = get_state()
+        self._task_pool: Queue[Task] = task_pool
+        self._idx: int = idx
         super().__init__(target=self.run, name=f"#{idx}")
 
     def run(self):
@@ -35,6 +32,8 @@ class Worker(t.Thread):
         printer = get_printer()
 
         while True:
+            if self._shutdown_on_flag():
+                return
             try:
                 task = self._task_pool.get_nowait()
             except Empty:
@@ -43,17 +42,22 @@ class Worker(t.Thread):
                 return
             if not task:
                 continue
-            if (delay := self._options.delay) > 0:
-                self._update_state("sleep")
-                time.sleep(delay)
+
+            delay = self._state.options.delay
+            self._update_state("sleep")
+            while delay > 0:
+                if self._shutdown_on_flag():
+                    return
+                time.sleep(1)
+                delay -= 1
 
             response = None
-            request_id = self._shared_state.last_request_id.next()
+            request_id = self._state.last_request_id.next()
             request_params = dict(
                 headers=task.headers,
                 data=task.body,
                 allow_redirects=True,
-                timeout=self._options.timeout,
+                timeout=self._state.options.timeout,
                 verify=task.url.startswith("https"),
             )
             logger.info(
@@ -73,35 +77,42 @@ class Worker(t.Thread):
 
             if response is not None:
                 if response.ok:
-                    self._shared_state.requests_success.next()
+                    self._state.requests_success.next()
                 else:
-                    self._shared_state.requests_failed.next()
+                    self._state.requests_failed.next()
 
-                self._shared_state.requests_latency.append(response.elapsed.total_seconds())
-                printer.print_response(task, response, request_id)
+                self._state.requests_latency.append(response.elapsed.total_seconds())
+                printer.print_completed_request(task, response, request_id)
                 self._dump_response(response, request_id)
             else:
-                self._shared_state.requests_failed.next()
-                printer.print_failed_request(task, time_after - time_before, request_id, exception)
+                self._state.requests_failed.next()
+                printer.print_failed_request(
+                    task, time_after - time_before, request_id, exception
+                )
                 logger.info(f"No response for #{request_id}")
 
     def _update_state(self, state: str):
         get_logger().debug(f"State -> {state}")
-        self._shared_state.worker_states[self._idx] = state
+        self._state.worker_states[self._idx] = state
+
+    def _shutdown_on_flag(self) -> bool:
+        if get_state().shutdown_flag.is_set():
+            self._update_state("dead")
+            return True
+        return False
 
     def _dump_response(self, response: Response, request_id: int):
+        label = f"Response #{request_id} %s:"
+        info_parts = [label % "metadata", str(response.status_code), str(response.headers)]
+
         logger = get_logger()
-        logger.info(
-            f"Response #{request_id} metadata: {response.status_code} {response.headers}"
-        )
+        logger.info(" ".join(info_parts))
         try:
-            logger.debug(
-                pt.dump(response.content.decode(), f"Response #{request_id} content")
-            )
+            decoded = response.content.decode()
+            logger.debug(pt.dump(decoded, label % "content"))
         except UnicodeError:
-            logger.debug(
-                pt.BytesTracer().apply(
-                    response.content,
-                    pt.TracerExtra(f"Response #{request_id} raw content"),
-                )
+            trace = pt.BytesTracer().apply(
+                response.content,
+                pt.TracerExtra(label % "raw content"),
             )
+            logger.debug(trace)
