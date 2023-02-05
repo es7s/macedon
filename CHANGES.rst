@@ -4,6 +4,21 @@ Changelog
 
 This project uses Semantic Versioning -- https://semver.org
 
+0.9.10
+-------
+
+- 🐞 FIX: broken dependency
+
+0.9.9
+-------
+- 🌱 NEW: automatic calculation of default threads number
+- 🌱 NEW: TRACE logging level
+
+0.9.8
+-------
+
+- 💎 REFACTOR: `Worker` and `Printer` classes and error output formatting
+
 0.9.7
 -------
 

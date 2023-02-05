@@ -31,23 +31,24 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
 
 ## Configuration / Advanced usage
 
-    Usage: macedon [OPTIONS] [ENDPOINT_URL]...
-
+    Usage: python -m macedon [OPTIONS] [ENDPOINT_URL]...
+    
     Options:
-      -T, --threads INTEGER         Number of threads for concurrent request making.  [default: 1]
+      -T, --threads INTEGER         Number of threads for concurrent request making. Default value depends on number of
+                                    CPU cores available in the system.  [default: 6]
       -n, --amount INTEGER          How many times each request will be performed.  [default: 1]
-      -d, --delay FLOAT             Seconds to wait between each request.  [default: 0]
+      -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
-      -f, --file FILENAME           Execute request(s) from a specified file. The file should contain
-                                    a list of endpoints in the format '{method} {url}', one per line.
-                                    Another supported (partially) format is JetBrains HTTP Client
-                                    format, which additionally allows to specify request headers and
-                                    body. The option can be specified multiple times. The ENDPOINT_URL
-                                    argument(s) are ignored if this option is present.
+      -f, --file FILENAME           Execute request(s) from a specified file. The file should contain a list of endpoints
+                                    in the format '{method} {url}', one per line. Another supported (partially) format is
+                                    JetBrains HTTP Client format, which additionally allows to specify request headers and
+                                    body. The option can be specified multiple times. The ENDPOINT_URL argument(s) are
+                                    ignored if this option is present.
       -c, --color / -C, --no-color
       --show-id
       --show-error
-      -v, --verbose                 Display detailed info on every request.  [0<=x<=2]
+      -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads
+                                    debugging, -vvv for response tracing  [0<=x<=3]
       --help                        Show this message and exit.
 
 
