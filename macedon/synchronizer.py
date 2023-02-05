@@ -6,6 +6,7 @@ import time
 from queue import Queue
 
 import click
+import psutil
 
 from ._common import Options, Task, State, get_state
 from .fileparser import get_parser
@@ -78,3 +79,12 @@ class Synchronizer:
         state.worker_states = ["init"] * threads
         for idx in range(threads):
             self._workers.append(Worker(self._task_pool, idx))
+
+
+def get_default_thread_num() -> int:
+    cores = psutil.cpu_count()
+    if not cores:
+        return 1
+    if cores <= 4:
+        return cores
+    return min(16, cores // 2)

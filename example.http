@@ -1,0 +1,24 @@
+###--- basic ------------------------------------------------------------------
+
+GET http://localhost:8087/api/v1/test
+
+###--- JWT authorization ------------------------------------------------------
+
+POST http://localhost:8087/api/v1/test_jwt
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbG[...]
+
+###--- JSON body --------------------------------------------------------------
+
+POST http://localhost:8087/api/v1/test_json_body
+Accept: application/json
+Content-Type: application/json
+
+{
+    "limit": 20,
+    "offset": 0,
+    "partner_account_id": "10",
+    "created_at_start": "2022-07-01",
+    "created_at_end": "2022-07-25"
+}
+
+###

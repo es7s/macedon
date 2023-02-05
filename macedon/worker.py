@@ -12,7 +12,7 @@ from requests import Response
 
 import pytermor as pt
 from ._common import Options, Task, get_state, State
-from .logger import get_logger
+from .logger import get_logger, TRACE
 from .printer import get_printer
 
 
@@ -57,7 +57,7 @@ class Worker(t.Thread):
                 headers=task.headers,
                 data=task.body,
                 allow_redirects=True,
-                timeout=self._state.options.timeout,
+                timeout=(self._state.options.timeout/2, self._state.options.timeout/2),
                 verify=task.url.startswith("https"),
             )
             logger.info(
@@ -109,10 +109,10 @@ class Worker(t.Thread):
         logger.info(" ".join(info_parts))
         try:
             decoded = response.content.decode()
-            logger.debug(pt.dump(decoded, label % "content"))
+            logger.log(TRACE, pt.dump(decoded, label % "content"))
         except UnicodeError:
             trace = pt.BytesTracer().apply(
                 response.content,
                 pt.TracerExtra(label % "raw content"),
             )
-            logger.debug(trace)
+            logger.log(TRACE, trace)

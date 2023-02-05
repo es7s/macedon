@@ -5,7 +5,6 @@
 import os
 import signal
 import sys
-import threading
 
 import click
 import urllib3
@@ -18,7 +17,7 @@ from .fileparser import init_parser
 from .io import init_io
 from .logger import init_loggers, get_logger
 from .printer import init_printer, get_printer
-from .synchronizer import Synchronizer
+from .synchronizer import Synchronizer, get_default_thread_num
 
 _shutdown_started = False
 
@@ -57,9 +56,10 @@ class ClickCommand(click.Command):
     "-T",
     "--threads",
     type=int,
-    default=4,
+    default=get_default_thread_num(),
     show_default=True,
-    help="Number of threads for concurrent request making.",
+    help="Number of threads for concurrent request making. Default value depends "
+         "on number of CPU cores available in the system.",
 )
 @click.option(
     "-n",
@@ -75,7 +75,7 @@ class ClickCommand(click.Command):
     type=float,
     default=0,
     show_default=True,
-    help="Seconds to wait between each request.",
+    help="Seconds to wait between requests.",
 )
 @click.option(
     "-t",
@@ -117,9 +117,10 @@ class ClickCommand(click.Command):
     "-v",
     "--verbose",
     count=True,
-    type=click.types.IntRange(min=0, max=2, clamp=True),
+    type=click.types.IntRange(min=0, max=3, clamp=True),
     default=0,
-    help="Display detailed info on every request.",
+    help="Increase details level: -v for request info, -vv for debugging worker "
+         "threads debugging, -vvv for response tracing",
 )
 def callback(endpoint_url: tuple[str], file: tuple[click.File], **kwargs):
     options = Options(**kwargs)
