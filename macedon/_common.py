@@ -6,7 +6,9 @@ from __future__ import annotations
 from threading import Lock, Event
 from dataclasses import dataclass, field
 
+import psutil
 from requests.structures import CaseInsensitiveDict
+
 
 _state: State|None = None
 
@@ -21,6 +23,15 @@ def init_state(options: Options):
     global _state
     _state = State(options)
     return _state
+
+
+def get_default_thread_num() -> int:
+    cores = psutil.cpu_count()
+    if not cores:
+        return 1
+    if cores <= 4:
+        return cores
+    return min(16, cores // 2)
 
 
 class ThreadSafeCounter:
@@ -54,14 +65,15 @@ class State:
 
 @dataclass(frozen=True)
 class Options:
-    color: bool
-    threads: int
-    amount: int
-    delay: float
-    timeout: float
-    verbose: int
-    show_id: bool
-    show_error: bool
+    amount: int = 1
+    color: bool = None
+    delay: float = 0
+    insecure: bool = False
+    show_error: bool = False
+    show_id: bool = False
+    threads: int = get_default_thread_num()
+    timeout: float = 10
+    verbose: int = 0
 
 
 @dataclass(frozen=True)
@@ -70,3 +82,4 @@ class Task:
     method: str = "GET"
     headers: CaseInsensitiveDict = None
     body: str = None
+

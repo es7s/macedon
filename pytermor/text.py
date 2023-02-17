@@ -535,7 +535,7 @@ class SimpleTable(IRenderable):
 
     def _render_cells(self, renderer: IRenderer, *row: IRenderable) -> t.Iterable[str]:
         fixed_len = self._sum_len(*row, fixed_only=True)
-        free_len = self._width - fixed_len
+        free_len = max(0, self._width - fixed_len)
         for cell in row:
             if not cell.has_width and cell.allows_width_setup:
                 cell.set_width(free_len)

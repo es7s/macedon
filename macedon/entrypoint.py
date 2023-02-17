@@ -17,7 +17,7 @@ from .fileparser import init_parser
 from .io import init_io
 from .logger import init_loggers, get_logger
 from .printer import init_printer, get_printer
-from .synchronizer import Synchronizer, get_default_thread_num
+from .synchronizer import Synchronizer
 
 _shutdown_started = False
 
@@ -33,6 +33,7 @@ def shutdown():
     _shutdown_started = True
     get_state().shutdown_flag.set()
     get_printer().print_shutdown()
+
 
 def exit_gracefully(signal_code: int, *args):
     get_logger().debug(f"{signal.Signals(signal_code).name} ({signal_code}) received")
@@ -56,16 +57,16 @@ class ClickCommand(click.Command):
     "-T",
     "--threads",
     type=int,
-    default=get_default_thread_num(),
+    default=Options.threads,
     show_default=True,
     help="Number of threads for concurrent request making. Default value depends "
-         "on number of CPU cores available in the system.",
+    "on number of CPU cores available in the system.",
 )
 @click.option(
     "-n",
     "--amount",
     type=int,
-    default=1,
+    default=Options.amount,
     show_default=True,
     help="How many times each request will be performed.",
 )
@@ -73,7 +74,7 @@ class ClickCommand(click.Command):
     "-d",
     "--delay",
     type=float,
-    default=0,
+    default=Options.delay,
     show_default=True,
     help="Seconds to wait between requests.",
 )
@@ -81,9 +82,16 @@ class ClickCommand(click.Command):
     "-t",
     "--timeout",
     type=float,
-    default=10,
+    default=Options.timeout,
     show_default=True,
     help="Seconds to wait for the response.",
+)
+@click.option(
+    "-i",
+    "--insecure",
+    is_flag=True,
+    default=Options.insecure,
+    help="Skip certificate verifying on HTTPS connections.",
 )
 @click.option(
     "-f",
@@ -100,27 +108,31 @@ class ClickCommand(click.Command):
     "-c/-C",
     "--color/--no-color",
     is_flag=True,
-    default=None,
-    help="",
+    default=Options.color,
+    help="Force output colorizing using ANSI escape sequences or disable it "
+    "unconditionally. If omitted, the application determine it automatically "
+    "by checking if the output device is a terminal emulator with SGR support.",
 )
 @click.option(
     "--show-id",
     is_flag=True,
-    help="",
+    default=Options.show_id,
+    help="Print a column with request serial number.",
 )
 @click.option(
     "--show-error",
     is_flag=True,
-    help="",
+    default=Options.show_error,
+    help="Print a column with error details (when applicable).",
 )
 @click.option(
     "-v",
     "--verbose",
     count=True,
     type=click.types.IntRange(min=0, max=3, clamp=True),
-    default=0,
+    default=Options.verbose,
     help="Increase details level: -v for request info, -vv for debugging worker "
-         "threads debugging, -vvv for response tracing",
+    "threads debugging, -vvv for response tracing",
 )
 def callback(endpoint_url: tuple[str], file: tuple[click.File], **kwargs):
     options = Options(**kwargs)

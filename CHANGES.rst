@@ -4,6 +4,10 @@ Changelog
 
 This project uses Semantic Versioning -- https://semver.org
 
+0.9.11
+------
+- 🐞 FIX: full output when no terminal attached
+
 0.9.10
 -------
 

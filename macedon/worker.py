@@ -30,6 +30,7 @@ class Worker(t.Thread):
     def run(self):
         logger = get_logger()
         printer = get_printer()
+        options = self._state.options
 
         while True:
             if self._shutdown_on_flag():
@@ -43,7 +44,7 @@ class Worker(t.Thread):
             if not task:
                 continue
 
-            delay = self._state.options.delay
+            delay = options.delay
             self._update_state("sleep")
             while delay > 0:
                 if self._shutdown_on_flag():
@@ -57,8 +58,8 @@ class Worker(t.Thread):
                 headers=task.headers,
                 data=task.body,
                 allow_redirects=True,
-                timeout=(self._state.options.timeout/2, self._state.options.timeout/2),
-                verify=task.url.startswith("https"),
+                timeout=(options.timeout / 2, options.timeout / 2),
+                verify=(not options.insecure and task.url.startswith("https")),
             )
             logger.info(
                 f"Performing request #{request_id}: {task.method} {task.url} {request_params}"
@@ -103,13 +104,17 @@ class Worker(t.Thread):
 
     def _dump_response(self, response: Response, request_id: int):
         label = f"Response #{request_id} %s:"
-        info_parts = [label % "metadata", str(response.status_code), str(response.headers)]
+        info_parts = [
+            label % "metadata",
+            str(response.status_code),
+            str(response.headers),
+        ]
 
         logger = get_logger()
         logger.info(" ".join(info_parts))
         try:
             decoded = response.content.decode()
-            logger.log(TRACE, pt.dump(decoded, label % "content"))
+            logger.log(TRACE, pt.dump(decoded, label % "content", max_len_shift=0))
         except UnicodeError:
             trace = pt.BytesTracer().apply(
                 response.content,

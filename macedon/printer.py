@@ -33,6 +33,7 @@ def init_printer() -> Printer:
 
 
 class Printer:
+    CW_RESULT_LABEL = 14
     COLUMN_PAD = 2
     CW_STATUS = 4
     CW_SIZE = 7
@@ -48,12 +49,15 @@ class Printer:
     METHOD_NOK_ST = pt.Style(METHOD_OK_ST, fg=pt.cv.GRAY_23)
     URL_OK_ST = pt.NOOP_STYLE
     URL_NOK_ST = pt.Style(URL_OK_ST, fg=pt.cv.GRAY_23)
+    RESULTS_SUCCESS_ST = pt.Style(fg=pt.cv.GREEN, bold=True, inversed=True)
+    RESULTS_FAILURE_ST = pt.Style(fg=pt.cv.RED, bold=True, inversed=True)
 
     def __init__(self):
         self._state: State = get_state()
         self._lock: th.Lock = th.Lock()
         self._request_table: pt.SimpleTable = pt.SimpleTable(
-            sep=pt.pad(self.COLUMN_PAD)
+            sep=pt.pad(self.COLUMN_PAD),
+            width=self._get_table_width(),
         )
         self._progress_table: pt.SimpleTable = pt.SimpleTable(sep="")
 
@@ -65,13 +69,13 @@ class Printer:
         req_total = self._state.requests_total.value
         threads = self._state.options.threads
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Threads:", width=12),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text(f"Threads:", width=self.CW_RESULT_LABEL),
             pt.Text(str(threads), pt.Style(bold=True), width=6, align="right"),
         )
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Requests:", width=12),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text(f"Requests:", width=self.CW_RESULT_LABEL),
             pt.Text(str(req_total), pt.Style(bold=True), width=6, align="right"),
         )
         self._print_separator()
@@ -128,8 +132,18 @@ class Printer:
         req_total = self._state.requests_total.value
         req_success = self._state.requests_success.value
         req_failed = self._state.requests_failed.value
-        success_st = self.SUCCESS_ST if req_success == req_total else None
-        failed_st = self.FAILURE_ST if req_failed > 0 else None
+
+        success_st, result_st = pt.NOOP_STYLE, pt.NOOP_STYLE
+        result_str = "N/A"
+        if req_success == req_total:
+            success_st = self.SUCCESS_ST
+            result_st = self.RESULTS_SUCCESS_ST
+            result_str = "PASS"
+        if req_failed > 0:
+            success_st = self.FAILURE_ST
+            result_st = self.RESULTS_FAILURE_ST
+            result_str = "FAIL"
+
         avg_latency_fmtd = pt.Text("---", self.NO_VAL_ST, width=5, align="right")
         if self._state.requests_latency:
             avg_latency = pt.utilmisc.median(self._state.requests_latency)
@@ -138,25 +152,25 @@ class Printer:
         self._reset_cursor_x()
         self._print_separator()
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Successful:", width=12),
-            pt.Text(str(req_success), success_st, width=6, align="right"),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text("Result:", width=self.CW_RESULT_LABEL),
+            pt.Text(f" {result_str} ", result_st),
         )
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Failed:", width=12),
-            pt.Text(str(req_failed), failed_st, width=6, align="right"),
-            pt.Fragment(f"  ({100*req_failed/req_total:.1f}%)"),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text("Successful:", width=self.CW_RESULT_LABEL),
+            pt.Text(f"{req_success}/{req_total}", success_st, width=6, align="right"),
+            pt.Fragment(f"  ({100*req_success/req_total:.1f}%)"),
         )
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Avg (p50):", width=12),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text("Avg (p50):", width=self.CW_RESULT_LABEL),
             pt.Text(width=1),
             avg_latency_fmtd,
         )
         self._print_row(
-            pt.Text(width=2),
-            pt.Text(f"Total time:", width=12),
+            pt.Text(width=self.COLUMN_PAD),
+            pt.Text("Total time:", width=self.CW_RESULT_LABEL),
             pt.Text(width=1),
             self._format_elapsed(time_delta_ns),
         )
@@ -191,6 +205,13 @@ class Printer:
             return
         get_stdout().echo(pt.ansi.make_set_cursor_x_abs(1).assemble(), newline=False)
 
+    def _get_table_width(self) -> int:
+        if self._is_format_allowed:
+            return max(32, pt.get_terminal_width())
+        return 65535
+        # max 64k for unformatted output (e.g.,
+        # when output is redirected or with -C option)
+
     def _get_output_mode(self, opt_color: bool | None) -> pt.OutputMode:
         if opt_color is None:
             return pt.OutputMode.AUTO
@@ -218,7 +239,7 @@ class Printer:
             self._get_error_type(exception),
             self.FAILURE_ST,
             width=self.CW_STATUS + self.CW_SIZE,
-            align="right",
+            align="left",
         )
 
     def _format_size(self, size: int) -> pt.Text:
@@ -249,7 +270,7 @@ class Printer:
         elif isinstance(elapsed, timedelta):
             seconds = elapsed.total_seconds()
         else:
-            get_logger().error(f"Invalid type of 'elazpsed' metric: {elapsed!r}")
+            get_logger().error(f"Invalid type of 'elapsed' metric: {elapsed!r}")
             return self._format_no_val(width=self.CW_ELAPSED)
         return self._elapsed_formatter.format(seconds)
 
@@ -296,13 +317,12 @@ class Printer:
         self, url: str, method: str, ok: bool, exception: Exception = None
     ) -> pt.Text:
         method_len = max(len(m) for m in self._state.used_methods)
-        error = pt.Fragment(self._get_error_msg(exception), self.ERROR_ST)
         method_st = self.METHOD_OK_ST if ok else self.METHOD_NOK_ST
         url_st = self.URL_OK_ST if ok else self.URL_NOK_ST
         result = [
             pt.Fragment(f"{method:>{method_len}.{method_len}s} ", method_st),
             pt.Fragment(url + pt.pad(2), url_st),
-            error,
+            pt.Fragment(self._get_error_msg(exception), self.ERROR_ST),
         ]
         return pt.Text(*result)
 
