@@ -39,18 +39,20 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -n, --amount INTEGER          How many times each request will be performed.  [default: 1]
       -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
+      -i, --insecure                Skip certificate verifying on HTTPS connections.
       -f, --file FILENAME           Execute request(s) from a specified file. The file should contain a list of endpoints
                                     in the format '{method} {url}', one per line. Another supported (partially) format is
                                     JetBrains HTTP Client format, which additionally allows to specify request headers and
                                     body. The option can be specified multiple times. The ENDPOINT_URL argument(s) are
                                     ignored if this option is present.
-      -c, --color / -C, --no-color
-      --show-id
-      --show-error
+      -c, --color / -C, --no-color  Force output colorizing using ANSI escape sequences or disable it unconditionally. If
+                                    omitted, the application determine it automatically by checking if the output device
+                                    is a terminal emulator with SGR support.
+      --show-id                     Print a column with request serial number.
+      --show-error                  Print a column with error details (when applicable).
       -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads
                                     debugging, -vvv for response tracing  [0<=x<=3]
       --help                        Show this message and exit.
-
 
 
 ## Changelog

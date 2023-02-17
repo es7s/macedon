@@ -6,7 +6,9 @@ This project uses Semantic Versioning -- https://semver.org
 
 0.9.11
 ------
+
 - 🐞 FIX: full output when no terminal attached
+- 🌱 NEW: ``--insecure`` option
 
 0.9.10
 -------
@@ -15,6 +17,7 @@ This project uses Semantic Versioning -- https://semver.org
 
 0.9.9
 -------
+
 - 🌱 NEW: automatic calculation of default threads number
 - 🌱 NEW: TRACE logging level
 
