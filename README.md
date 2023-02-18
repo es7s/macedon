@@ -1,19 +1,18 @@
-<h1 align="center">
-  <img src="https://user-images.githubusercontent.com/50381946/211150260-a91aa0c7-f79b-459c-8a37-a92da96a86a2.png">
-  <br>
-  <code>macedon</code>
-  <br>
-</h1>
+<div align="center">
+   <img src="https://user-images.githubusercontent.com/50381946/211150260-a91aa0c7-f79b-459c-8a37-a92da96a86a2.png" width="96" height="96"><br>
+   <img src="https://user-images.githubusercontent.com/50381946/219900319-d335e85f-5449-4bcf-8f3b-b56eb88f2246.png" width="400" height="64">
+</div>
 
-<p align="center">
-    <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
-    <a href="https://pepy.tech/project/macedon/">
-      <img alt="Downloads" src="https://pepy.tech/badge/macedon">
-    </a>
-    <a href="https://github.com/psf/black">
-        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
-    </a>
-</p>
+<div align="center">
+  <img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333">
+  <a href="https://pepy.tech/project/macedon/">
+    <img alt="Downloads" src="https://pepy.tech/badge/macedon">
+  </a>
+  <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
+  <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+</div>
+<h1> </h1>
+
 
 Multi-threaded CLI web service availability verifier. Takes a list of endpoints with optional input dataset, performs series of HTTP requests and displays the results.
 
