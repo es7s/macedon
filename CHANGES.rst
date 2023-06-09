@@ -4,6 +4,12 @@ Changelog
 
 This project uses Semantic Versioning -- https://semver.org
 
+0.10.0
+------
+
+- 🌱 NEW: ``--exit-code`` option
+- 📙 DOCS: add proxy configuration guide
+
 0.9.11
 ------
 
@@ -47,4 +53,3 @@ This project uses Semantic Versioning -- https://semver.org
 -------
 
 - Core
-

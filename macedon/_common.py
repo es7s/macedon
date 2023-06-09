@@ -69,6 +69,7 @@ class Options:
     color: bool = None
     delay: float = 0
     insecure: bool = False
+    exit_code: bool = False
     show_error: bool = False
     show_id: bool = False
     threads: int = get_default_thread_num()
@@ -82,4 +83,3 @@ class Task:
     method: str = "GET"
     headers: CaseInsensitiveDict = None
     body: str = None
-

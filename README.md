@@ -54,6 +54,66 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       --help                        Show this message and exit.
 
 
+## Proxy configuration
+
+The application is based on Python [requests](https://pypi.org/project/requests) library that manages all of low-level request handling, which includes proxy support, so that opens up a possibility to test the connectivity to proxies as well. Proxy configuration is done using environment variables. Below is a mini-tutorial on querying the remote server through local SOCKS proxy, but it shall work with regular HTTP/S proxies as well.
+
+First let's create a file with request data, specifically -- with HTTP headers, as a lot of services are suspicious to the requests that came not from a regular browser, but from some custom software, and redirect them to some crazy captchas or just respond with 4XXs.
+
+File *"req1.http"*:
+```http request
+GET http://2ip.ru
+User-Agent: curl/7.68.0
+Accept: */*
+Accept-Encoding: gzip
+```
+
+Now, let's perform a direct request. I added some `-v` options to examine the actual response from the server, which should contain our external IP address. <small>*The main reason why I'm regularly using this service -- it's the fastest way to check your external IP address from literally everywhere with just a working terminal being required, and it's very easy to memorize: `curl 2ip.ru`*</small>.
+
+```console
+$ macedon -T1 -f req1.http -vvv
+...
+   200    16b  105ms  GET http://2ip.ru                                                                               
+ [ 100% 1/1 ] [INFO ][macedon:#0](+201ms) Response #1 metadata: 200 {'Server': 'nginx', 'Date': 'Fri, 09 Jun 2023 14:44:23 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '16', 'Connection': 'keep-alive'}
+[TRACE][macedon:#0](+201ms) 
+Response #1 content:_____________________________________________________
+  0 |U+ 31 38 35 2E 32 34 33 2E 32 31 38 2E 31 35 32 0A |185.243.218.152↵
+----------------------------------------------------------------------(16)
+ ...
+```
+
+Direct requests work, yay. Next, to use a proxy server define the environment variables **HTTP_PROXY** and **HTTPS_PROXY** in the following format:
+
+```console
+$ export HTTP_PROXY="http://<user>:<pass>@<proxy>:<port>"
+$ export HTTPS_PROXY="http://<user>:<pass>@<proxy>:<port>"
+```
+
+Needless to say that you shall put the real credentials instead of placeholders, but just in case... 
+
+Personally I prefer another method: prepending the command with an environment variable, which sets it as well, but for the one command only. Let's try it:
+
+```console
+
+$ HTTP_PROXY=socks5h://localhost:1080 macedon -f req1.http -vvv
+...
+  200    14b  964ms  GET http://2ip.ru                                                                               
+ [ 100% 1/1 ] [INFO ][macedon:#0](+1.06s) Response #1 metadata: 200 {'Server': 'nginx', 'Date': 'Fri, 09 Jun 2023 14:49:24 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '14', 'Connection': 'keep-alive'}
+[TRACE][macedon:#0](+1.07s) 
+Response #1 content:_______________________________________________
+  0 |U+ 32 33 2e 31 32 39 2e 36 34 2e 31 33 32 0a |23.129.64.132↵  
+---------------------------------------------------------------(14)
+```
+The service now sees that we made a request from another address and reflects that in his response. Furthermore,  the latency drastically increased from 105 ms to almost 1 second, which can also be considered as confirmation of successful proxying the request.
+
+There is also a possibility to encounter errors while attempting to connect through *SOCKS* proxy (*HTTP* proxies unaffected), which usually look like this: `[ERROR][macedon:#0](+92.9ms) Missing dependencies for SOCKS support` (*sigh*). Well, there is an easy solution for this: just install the missing depenedencies:
+
+```console
+pipx inject macedon requests[socks]
+```
+
+This is an optional dependency and due to this it's not installed by default. If `pipx` is not present, it's also can be done manually with `venv/bin/pip` (assuming the `virtualenv` is being used instead).
+
 ## Changelog
 
 [CHANGES.rst](CHANGES.rst)

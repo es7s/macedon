@@ -105,6 +105,19 @@ class ClickCommand(click.Command):
     "The ENDPOINT_URL argument(s) are ignored if this option is present.",
 )
 @click.option(
+    "-x",
+    "--exit-code",
+    is_flag=True,
+    default=Options.exit_code,
+    help="Return different exit codes depending on completed / failed requests. "
+    "With this option exit code 0 is returned if and only if each request was "
+    "considered successful (1xx, 2xx HTTP codes); even one failed request (4xx, "
+    "timed out, etc) will result in a non-zero exit code. (Normally the exit code "
+    "0 is returned as long as the application terminated under normal conditions,"
+    " regardless of an actual HTTP codes; but it can still die with a non-zero "
+    "code upon invalid option syntax, etc).",
+)
+@click.option(
     "-c/-C",
     "--color/--no-color",
     is_flag=True,
@@ -132,13 +145,13 @@ class ClickCommand(click.Command):
     type=click.types.IntRange(min=0, max=3, clamp=True),
     default=Options.verbose,
     help="Increase details level: -v for request info, -vv for debugging worker "
-    "threads debugging, -vvv for response tracing",
+    "threads, -vvv for response tracing",
 )
 def callback(endpoint_url: tuple[str], file: tuple[click.File], **kwargs):
     options = Options(**kwargs)
     urllib3.disable_warnings(InsecureRequestWarning)
 
-    init_state(options)
+    state = init_state(options)
     init_io(options)
     init_loggers(options)
     _log_init_info(options)
@@ -147,6 +160,10 @@ def callback(endpoint_url: tuple[str], file: tuple[click.File], **kwargs):
     init_printer()
     sync = Synchronizer(endpoint_url, file)
     sync.run()
+
+    if state.options.exit_code:
+        if state.requests_failed.value > 0:
+            exit(1)
 
 
 def _log_init_info(options: Options):
