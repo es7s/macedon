@@ -30,7 +30,7 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
 
 ## Configuration / Advanced usage
 
-    Usage: python -m macedon [OPTIONS] [ENDPOINT_URL]...
+    Usage: macedon [OPTIONS] [ENDPOINT_URL]...
     
     Options:
       -T, --threads INTEGER         Number of threads for concurrent request making. Default value depends on number of
@@ -41,18 +41,23 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -i, --insecure                Skip certificate verifying on HTTPS connections.
       -f, --file FILENAME           Execute request(s) from a specified file. The file should contain a list of endpoints
                                     in the format '{method} {url}', one per line. Another supported (partially) format is
-                                    JetBrains HTTP Client format, which additionally allows to specify request headers and
+                                    JetBrains HTTP Client format, which additionally allows to specify request headers an
                                     body. The option can be specified multiple times. The ENDPOINT_URL argument(s) are
                                     ignored if this option is present.
+      -x, --exit-code               Return different exit codes depending on completed / failed requests. With this optio
+                                    exit code 0 is returned if and only if each request was considered successful (1xx,
+                                    2xx HTTP codes); even one failed request (4xx, timed out, etc) will result in a non-
+                                    zero exit code. (Normally the exit code 0 is returned as long as the application
+                                    terminated under normal conditions, regardless of an actual HTTP codes; but it can
+                                    still die with a non-zero code upon invalid option syntax, etc).
       -c, --color / -C, --no-color  Force output colorizing using ANSI escape sequences or disable it unconditionally. If
                                     omitted, the application determine it automatically by checking if the output device
                                     is a terminal emulator with SGR support.
       --show-id                     Print a column with request serial number.
       --show-error                  Print a column with error details (when applicable).
-      -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads
-                                    debugging, -vvv for response tracing  [0<=x<=3]
-      --help                        Show this message and exit.
-
+      -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads, -vvv
+                                    for response tracing  [0<=x<=3]
+      --help                        Show this message and exit.                                                          
 
 ## Proxy configuration
 
