@@ -1,0 +1,73 @@
+name: testing and coverage w/f
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11" ]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir -r requirements-dev.txt
+
+#      - name: Lint with flake8
+#        run: |
+#          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+#          flake8 . --count --exit-zero --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest
+
+  cover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir -r requirements-dev.txt
+
+      - name: Run coverage
+        run: |
+          coverage run -m pytest
+          coverage json
+          coverage report
+
+      - name: Upload to coveralls [debug]
+        if: ${{ github.run_attempt > 1 }}
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          coveralls debug --service=github
+          coveralls --output=cov --service=github
+          xxd < cov
+
+      - name: Upload to coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          coveralls --service=github
