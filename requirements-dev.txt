@@ -6,7 +6,7 @@ pytermor @ git+ssh://git@github.com/delameter/pytermor@dev
 --pre
 twine==4.0.2
 pytest==7.1.3
-coverage==6.4.4
+coverage==6.5.0
 pydeps==1.11.0
 
 attrs==22.1.0
