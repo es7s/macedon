@@ -43,6 +43,11 @@ def init_io(options: Options) -> tuple[IoProxy, IoProxy]:
     pt.RendererManager.set_default(_stdout.renderer)
     return _stdout, _stderr
 
+def destroy_io():
+    global _stdout, _stderr
+    _stdout.destroy()
+    _stderr.destroy()
+    _stdout = _stderr = None
 
 class IoProxy:
     def __init__(self, color_option: bool, io: t.IO):
@@ -84,6 +89,9 @@ class IoProxy:
         except BrokenPipeError:
             self._broken = True
             self._pacify_flush_wrapper()
+
+    def destroy(self):
+        self._io = None
 
     def _make_renderer(self, io: t.IO) -> pt.IRenderer:
         if self._color is False:

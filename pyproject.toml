@@ -4,3 +4,53 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+# ---------------------------------------------------------
+# lint, pytest
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.pytest.ini_options]
+testpaths = [
+    "macedon",
+    "tests",
+]
+addopts = [
+    "-p", "no:doctest",
+    "--strict-config",
+    "--strict-markers",
+    "--maxfail", "5",
+]
+xfail_strict = true
+markers = []
+
+# ---------------------------------------------------------
+# coverage
+
+[tool.coverage.run]
+source = ["macedon"]
+branch = true
+omit = [
+    "*/__init__.py",
+    "*/__main__.py",
+    "*/_version.py",
+]
+dynamic_context = "test_function"
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+ignore_errors = true
+
+[tool.coverage.html]
+directory = "misc/coverage"
+title = "macedon coverage report"

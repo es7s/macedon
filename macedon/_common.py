@@ -3,14 +3,16 @@
 #  (c) 2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 from __future__ import annotations
-from threading import Lock, Event
+
+import typing as t
+from collections import deque
 from dataclasses import dataclass, field
+from threading import Event, Lock
 
 import psutil
 from requests.structures import CaseInsensitiveDict
 
-
-_state: State|None = None
+_state: State | None = None
 
 
 def get_state() -> State:
@@ -23,6 +25,11 @@ def init_state(options: Options):
     global _state
     _state = State(options)
     return _state
+
+
+def destroy_state():
+    global _state
+    _state = None
 
 
 def get_default_thread_num() -> int:
@@ -49,22 +56,24 @@ class ThreadSafeCounter:
         return self._value
 
 
-@dataclass
+@dataclass(frozen=True)
 class State:
     options: Options
-    last_request_id = ThreadSafeCounter()
-    requests_total = ThreadSafeCounter()
-    requests_printed = ThreadSafeCounter()
-    requests_success = ThreadSafeCounter()
-    requests_failed = ThreadSafeCounter()
+    last_request_id: ThreadSafeCounter = field(default_factory=ThreadSafeCounter)
+    requests_total: ThreadSafeCounter = field(default_factory=ThreadSafeCounter)
+    requests_printed: ThreadSafeCounter = field(default_factory=ThreadSafeCounter)
+    requests_success: ThreadSafeCounter = field(default_factory=ThreadSafeCounter)
+    requests_failed: ThreadSafeCounter = field(default_factory=ThreadSafeCounter)
     requests_latency: list[float] = field(default_factory=list)
     used_methods: set[str] = field(default_factory=set[str])
-    worker_states: list[str] = None
-    shutdown_flag: Event = Event()
+    worker_states: deque[str] = field(default_factory=deque[str])
+    shutdown_flag: Event = field(default_factory=Event)
 
 
 @dataclass(frozen=True)
 class Options:
+    endpoint_url: tuple[str]
+    file: tuple[t.TextIO]
     amount: int = 1
     color: bool = None
     delay: float = 0

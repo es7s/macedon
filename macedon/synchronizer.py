@@ -5,10 +5,7 @@
 import time
 from queue import Queue
 
-import click
-import psutil
-
-from ._common import Options, Task, State, get_state
+from ._common import Options, Task, get_state
 from .fileparser import get_parser
 from .logger import get_logger
 from .printer import get_printer
@@ -16,20 +13,16 @@ from .worker import Worker
 
 
 class Synchronizer:
-    def __init__(
-        self,
-        url_args: tuple[str],
-        file: tuple[click.File],
-    ):
+    def __init__(self, options: Options):
         self._task_pool: Queue[Task] = Queue[Task]()
         self._workers: list[Worker] = []
 
         try:
-            self._init_task_queue(url_args, file)
+            self._init_task_queue(options)
             self._init_workers()
         except Exception as e:
-            get_logger().critical(e)
-            exit(1)
+            get_logger().exception(e)
+            raise RuntimeError(f"Failed to initialize workers: {e}") from e
 
     def run(self):
         printer = get_printer()
@@ -42,21 +35,25 @@ class Synchronizer:
         for worker in self._workers:
             worker.join()
 
+        self._workers.clear()
         time_after = time.time_ns()
         get_state().requests_latency.sort()
         printer.print_epilog(time_after - time_before)
 
-    def _init_task_queue(self, url_args: tuple[str], file: tuple[click.File]):
-        for file_inst in file:
+    def _init_task_queue(self, options: Options):
+        for file in options.file:
             try:
-                for task in get_parser().parse(file_inst):
+                for task in get_parser().parse(file):
                     self._append_task(task)
             except Exception as e:
-                get_logger().error(f"Failed to parse the file '{file}': {e}")
+                get_logger().exception(e)
+                continue
         if get_state().requests_total.value > 0:
             return
+        elif len(options.file):
+            raise RuntimeError("No valid tasks found in provided files")
 
-        for url in url_args:
+        for url in options.endpoint_url:
             if not url.startswith("http"):
                 url = f"http://{url}"
             self._append_task(Task(url))
@@ -76,6 +73,6 @@ class Synchronizer:
         state = get_state()
         threads = state.options.threads
 
-        state.worker_states = ["init"] * threads
+        state.worker_states.extend(["init"] * threads)
         for idx in range(threads):
             self._workers.append(Worker(self._task_pool, idx))

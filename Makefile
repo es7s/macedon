@@ -48,7 +48,7 @@ environment:  ## Show environment vars used by this Makefile
 	echo PIPX_DEFAULT_PYTHON=${PIPX_DEFAULT_PYTHON}
 	echo VENV_PATH=${PWD}/${VENV_PATH}
 
-reinit-build:  ## > Prepare environment for module building  <venv>
+reinit-venv:  ## > Prepare environment for module building  <venv>
 	rm -vrf ${VENV_PATH}
 	if [ ! -f .env.build ] ; then cp -u ${DOTENV_DIST} ${DOTENV} && sed -i -Ee '/^VERSION=/d' ${DOTENV} ; fi
 	${HOST_DEFAULT_PYTHON} -m venv ${VENV_PATH}
@@ -111,10 +111,9 @@ test-debug: ## Run pytest with VERY detailed output
 	${VENV_PATH}/bin/pytest tests -v --log-file-level=DEBUG --log-file=logs/testrun.${NOW}.log
 	if command -v bat &>/dev/null ; then bat logs/testrun.${NOW}.log -n --wrap=never ; else less logs/testrun.${NOW}.log ; fi
 
-coverage: ## Run coverage and make a report
+cover: ## Run coverage and make a report
 	rm -vrf ${OUT_COVER_PATH}
-	${VENV_PATH}/bin/python -m coverage run tests -vv
-	${VENV_PATH}/bin/coverage report
+	${VENV_PATH}/bin/coverage run -m pytest
 	${VENV_PATH}/bin/coverage html
 	if [ -n $$DISPLAY ] ; then xdg-open ${OUT_COVER_PATH}/index.html ; fi
 

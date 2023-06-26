@@ -1,13 +1,13 @@
-###--- basic ------------------------------------------------------------------
+### --- basic -----------------------------------------------------------------
 
 GET http://localhost:8087/api/v1/test
 
-###--- JWT authorization ------------------------------------------------------
+### --- JWT authorization -----------------------------------------------------
 
 POST http://localhost:8087/api/v1/test_jwt
 Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbG[...]
 
-###--- JSON body --------------------------------------------------------------
+### --- JSON body -------------------------------------------------------------
 
 POST http://localhost:8087/api/v1/test_json_body
 Accept: application/json

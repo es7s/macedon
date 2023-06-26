@@ -3,16 +3,15 @@
 #  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 import logging
+import sys
 from logging import (
-    LogRecord as BaseLogRecord,
     Formatter as BaseFormatter,
+    LogRecord as BaseLogRecord,
+    Logger as BaseLogger,
     StreamHandler,
     getLogger,
-    Logger,
-    Manager,
 )
-import sys
-from typing import Mapping, Any
+from typing import Mapping
 
 import pytermor as pt
 from ._common import Options
@@ -20,13 +19,29 @@ from .io import get_stderr
 
 TRACE = 5
 
-
 VERBOSITY_LOG_LEVELS = {
     0: logging.CRITICAL,
     1: logging.INFO,
     2: logging.DEBUG,
     3: TRACE,
 }
+
+
+class Logger(BaseLogger):
+    def trace(self, msg, *args, **kwargs):
+        self.log(level=TRACE, msg="\n" + msg, *args, **kwargs)
+
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1) -> None:
+        if level > logging.INFO:
+            # for any warning/error/critical:
+            if exc_info:
+                # show stack traces if verbosity>=2 (-vv), except ...
+                exc_info = (self.level <= logging.DEBUG)
+            else:
+                # ... when exc_info was manually disabled (requests' errors),
+                # in which case show traces only at max level verbosity (-vvv)
+                exc_info = (self.level <= TRACE)
+        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
 
 
 _logger: Logger | None = None
@@ -38,8 +53,9 @@ def get_logger() -> Logger:
     return _logger
 
 
-def init_loggers(options: Options):
+def init_logger(options: Options) -> Logger:
     logging.addLevelName(TRACE, "TRACE")
+    logging.setLoggerClass(Logger)
     logging.setLogRecordFactory(LogRecord)
 
     log_level = VERBOSITY_LOG_LEVELS.get(options.verbose, logging.WARNING)
@@ -57,14 +73,18 @@ def init_loggers(options: Options):
     _logger.addHandler(_handler)
     _logger.setLevel(log_level)
 
-    pt_logger = getLogger("pytermor")
-    handler = StreamHandler(sys.stderr)
-    handler.setFormatter(PytermorFormatter(options))
-    handler.setLevel(log_level)
-    pt_logger.addHandler(handler)
-    pt_logger.setLevel(log_level)
+    # pt_logger = getLogger("pytermor")
+    # handler = StreamHandler(sys.stderr)
+    # handler.setFormatter(PytermorFormatter(options))
+    # handler.setLevel(log_level)
+    # pt_logger.addHandler(handler)
+    # pt_logger.setLevel(log_level)
 
     return _logger
+
+def destroy_logger():
+    global _logger
+    _logger = None
 
 
 class LogRecord(BaseLogRecord):
@@ -101,14 +121,16 @@ class PytermorFormatter(Formatter):
 
 
 class SgrFormatter(Formatter):
+    # fmt: off
     LEVEL_TO_FMT_MAP: dict[int, pt.FT] = {
-        TRACE:         pt.Style(fg=pt.Color256.get_by_code(60)),
-        logging.DEBUG: pt.Style(fg=pt.Color256.get_by_code(66)),
-        logging.INFO: pt.cv.WHITE,
-        logging.WARNING: pt.cv.YELLOW,
-        logging.ERROR: pt.cv.RED,
-        logging.CRITICAL: pt.cv.HI_RED,
+        TRACE:              pt.Style(fg=pt.Color256.get_by_code(60)),
+        logging.DEBUG:      pt.Style(fg=pt.Color256.get_by_code(66)),
+        logging.INFO:       pt.cv.WHITE,
+        logging.WARNING:    pt.cv.YELLOW,
+        logging.ERROR:      pt.cv.RED,
+        logging.CRITICAL:   pt.cv.HI_RED,
     }
+    # fmt: on
 
     def __init__(self, options: Options):
         ts = self._get_rel_time_tpl(options)

@@ -5,39 +5,44 @@
 import re
 import typing as t
 
-import click
 from requests.structures import CaseInsensitiveDict
 
+import pytermor as pt
 from ._common import Task
 from .logger import get_logger
 
 
 class FileParser:
-    def parse(self, file: click.File):
+    def parse(self, file: t.TextIO):
+        data = file.read()
         try:
-            yield from self._parse_jb_http_file(file)
+            yield from self._parse(data, file.name)
         except Exception as e:
-            get_logger().error(e)
-        else:
-            return
-        try:
-            yield from self._parse_plain(file)
-        except Exception as e:
-            get_logger().error(e)
+            raise RuntimeError(f"Failed to parse file '{file}'") from e
 
-    def _parse_plain(self, file: click.File) -> t.Iterable[Task]:
-        while line := file.readline():
+    def _parse(self, data: str, file_name: str) -> t.Iterable[Task]:
+        get_logger().trace(pt.dump(data, file_name, max_len_shift=0))
+        lines = data.splitlines()
+        if all(re.fullmatch(R"^\s*$|^\S+\s+\S+$", line) for line in lines):
+            yield from self._parse_plain(lines)
+        else:
+            yield from self._parse_jb_http_file(data)
+
+    def _parse_plain(self, lines: list[str]) -> t.Iterable[Task]:
+        for line in lines:
+            if line.startswith('#'):
+                get_logger().debug(f"Skipping line starting with '#': '{line}'")
+                continue
             try:
                 yield Task(*self._extract_method_url(line))
             except ValueError as e:
-                get_logger().error(e)
+                get_logger().exception(e)
                 continue
 
-    def _parse_jb_http_file(self, file: click.File) -> t.Iterable[Task]:
+    def _parse_jb_http_file(self, data: str) -> t.Iterable[Task]:
         logger = get_logger()
         logger.debug("Attempting to parse jetbrains format")
 
-        data = file.read()
         request_list = re.split(r"^###.*$\s*", data, flags=re.MULTILINE)
         request_filtered_list = [*filter(None, (r.strip() for r in request_list))]
         logger.debug(f"Detected {len(request_filtered_list)} requests")
@@ -73,7 +78,7 @@ class FileParser:
 
         def _normalize(line: str, idx: int) -> str:
             nonlocal last_empty_line_idx
-            if re.match("^\s*$", line):
+            if re.match(r"^\s*$", line):
                 last_empty_line_idx = idx
                 return ""
             return line
@@ -88,7 +93,7 @@ class FileParser:
         return normalized, last_empty_line_idx
 
     def _extract_method_url(self, line: str) -> list[str, str]:
-        if re.match("^([A-Z]+)\s+(https?://\S+$)", line):
+        if re.match(r"^([A-Z]+)\s+(https?://\S+$)", line):
             result = [*reversed(line.split(" ", 1))]
             get_logger().debug(f"Found method and url: {result}")
             return result
@@ -113,6 +118,10 @@ def init_parser():
     global _parser
     _parser = FileParser()
     return _parser
+
+def destroy_parser():
+    global _parser
+    _parser = None
 
 
 _parser: FileParser | None = None
