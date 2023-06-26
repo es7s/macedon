@@ -60,8 +60,8 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
                                     is a terminal emulator with SGR support.
       --show-id                     Print a column with request serial number.
       --show-error                  Print a column with error details (when applicable).
-      -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads, -vvv
-                                    for response tracing  [0<=x<=3]
+      -v, --verbose                 Print more details: -v for request and error details, -vv for error stack traces and
+                                    worker threads diagnostic messages, -vvv for input file/response tracing.  [0<=x<=3]
       --help                        Show this message and exit.
 
 
