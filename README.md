@@ -16,17 +16,21 @@
 
 Multi-threaded CLI web service availability verifier. Takes a list of endpoints with optional input dataset, performs series of HTTP requests and displays the results.
 
+
 ## Motivation
 
 Necessity to have a fast and configurable endpoint testing tool at fingertips.
+
 
 ## Installation
 
     pipx install macedon
 
+
 ## Basic usage
 
 ![image](https://user-images.githubusercontent.com/50381946/211187585-2e932cde-f8f6-4d91-9769-962b6efdfe07.png)
+
 
 ## Configuration / Advanced usage
 
@@ -39,12 +43,13 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
       -i, --insecure                Skip certificate verifying on HTTPS connections.
-      -f, --file FILENAME           Execute request(s) from a specified file. The file should contain a list of endpoints
-                                    in the format '{method} {url}', one per line. Another supported (partially) format is
-                                    JetBrains HTTP Client format, which additionally allows to specify request headers an
-                                    body. The option can be specified multiple times. The ENDPOINT_URL argument(s) are
-                                    ignored if this option is present.
-      -x, --exit-code               Return different exit codes depending on completed / failed requests. With this optio
+      -f, --file FILENAME           Execute request(s) from a specified file, or from stdin, if FILENAME specified as '-'.
+                                    The file should contain a list of endpoints in the format '{method} {url}', one per
+                                    line. Another (partially) supported format is JetBrains HTTP Client format (see
+                                    below), which additionally allows to specify request headers and/or body. The option
+                                    can be specified multiple times. Note that ENDPOINT_URL argument(s) are ignored if
+                                    this option is present.
+      -x, --exit-code               Return different exit codes depending on completed / failed requests. With this option
                                     exit code 0 is returned if and only if each request was considered successful (1xx,
                                     2xx HTTP codes); even one failed request (4xx, timed out, etc) will result in a non-
                                     zero exit code. (Normally the exit code 0 is returned as long as the application
@@ -57,7 +62,11 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       --show-error                  Print a column with error details (when applicable).
       -v, --verbose                 Increase details level: -v for request info, -vv for debugging worker threads, -vvv
                                     for response tracing  [0<=x<=3]
-      --help                        Show this message and exit.                                                          
+      --help                        Show this message and exit.
+
+
+JetBrains HTTP Client format is described [here](https://jetbrains.com/help/idea/exploring-http-syntax.html). Also see [example.http](./example.http).
+
 
 ## Proxy configuration
 
@@ -118,6 +127,7 @@ pipx inject macedon requests[socks]
 ```
 
 This is an optional dependency and due to this it's not installed by default. If `pipx` is not present, it's also can be done manually with `venv/bin/pip` (assuming the `virtualenv` is being used instead).
+
 
 ## Changelog
 

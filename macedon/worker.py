@@ -17,13 +17,9 @@ from .printer import get_printer
 
 
 class Worker(t.Thread):
-    def __init__(
-        self,
-        task_pool: Queue[Task],
-        idx: int,
-    ):
+    def __init__(self, task_pool: Queue, idx: int):
         self._state: State = get_state()
-        self._task_pool: Queue[Task] = task_pool
+        self._task_pool: Queue = task_pool
         self._idx: int = idx
         super().__init__(target=self.run, name=f"#{idx}")
 

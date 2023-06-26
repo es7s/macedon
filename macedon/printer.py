@@ -31,6 +31,10 @@ def init_printer() -> Printer:
     _printer = Printer()
     return _printer
 
+def destroy_printer():
+    global _printer
+    _printer = None
+
 
 class Printer:
     CW_RESULT_LABEL = 14
@@ -143,6 +147,8 @@ class Printer:
             success_st = self.FAILURE_ST
             result_st = self.RESULTS_FAILURE_ST
             result_str = "FAIL"
+        if self._is_format_allowed:
+            result_str = f" {result_str} "
 
         avg_latency_fmtd = pt.Text("---", self.NO_VAL_ST, width=5, align="right")
         if self._state.requests_latency:
@@ -154,7 +160,7 @@ class Printer:
         self._print_row(
             pt.Text(width=self.COLUMN_PAD),
             pt.Text("Result:", width=self.CW_RESULT_LABEL),
-            pt.Text(f" {result_str} ", result_st),
+            pt.Text(result_str, result_st, width=6, align="right"),
         )
         self._print_row(
             pt.Text(width=self.COLUMN_PAD),
@@ -208,9 +214,7 @@ class Printer:
     def _get_table_width(self) -> int:
         if self._is_format_allowed:
             return max(32, pt.get_terminal_width())
-        return 65535
-        # max 64k for unformatted output (e.g.,
-        # when output is redirected or with -C option)
+        return 80
 
     def _get_output_mode(self, opt_color: bool | None) -> pt.OutputMode:
         if opt_color is None:
