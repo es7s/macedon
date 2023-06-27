@@ -9,7 +9,7 @@
   <br>
   <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
   <a href='https://coveralls.io/github/es7s/macedon?branch=master'><img src='https://coveralls.io/repos/github/es7s/macedon/badge.svg?branch=master' alt='Coverage Status' /></a>
-  <br><a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+  <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </div>
 <h1> </h1>
 
