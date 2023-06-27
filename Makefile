@@ -3,13 +3,14 @@
 ## (C) 2022                  ## A. Shavykin <0.delameter@gmail.com>
 ##---------------------------##-------------------------------------------------------------
 .ONESHELL:
-.PHONY: help test docs coverage
+.PHONY: help test docs
 
 PROJECT_NAME = macedon
 PROJECT_NAME_PUBLIC = ${PROJECT_NAME}
 PROJECT_NAME_PRIVATE = ${PROJECT_NAME}-test
 
-HOST_DEFAULT_PYTHON ?= /usr/bin/python
+HOST_DEFAULT_PYTHON = /usr/bin/python3.10
+
 VENV_PATH = venv
 VENV_TMP_PATH = /tmp/venv
 
@@ -45,7 +46,6 @@ environment:  ## Show environment vars used by this Makefile
 	echo OUT_BUILD_RELEASE_PATH=${PWD}/${OUT_BUILD_RELEASE_PATH}
 	echo OUT_COVER_PATH=${PWD}/${OUT_COVER_PATH}
 	echo OUT_DEPS_PATH=${PWD}/${OUT_DEPS_PATH}
-	echo PIPX_DEFAULT_PYTHON=${PIPX_DEFAULT_PYTHON}
 	echo VENV_PATH=${PWD}/${VENV_PATH}
 
 reinit-venv:  ## > Prepare environment for module building  <venv>
@@ -90,11 +90,6 @@ set-version: show-version
 	sed -E -i "s/^__version__.+/__version__ = \"$$VERSION\"/" ${PROJECT_NAME}/_version.py
 	echo "Updated version: ${GREEN}$$VERSION${RESET}"
 
-depends:  ## Build and display module dependency graph
-	rm -vrf ${OUT_DEPS_PATH}
-	mkdir -p ${OUT_DEPS_PATH}
-	./pydeps.sh ${VENV_PATH}/bin/pydeps ${PROJECT_NAME} ${OUT_DEPS_PATH}
-
 purge-cache:  ## Clean up pycache
 	find . -type d \( -name __pycache__ -or -name .pytest_cache \) -print -exec rm -rf {} +
 
@@ -111,11 +106,23 @@ test-debug: ## Run pytest with VERY detailed output
 	${VENV_PATH}/bin/pytest tests -v --log-file-level=DEBUG --log-file=logs/testrun.${NOW}.log
 	if command -v bat &>/dev/null ; then bat logs/testrun.${NOW}.log -n --wrap=never ; else less logs/testrun.${NOW}.log ; fi
 
+##
+## Coverage / dependencies
+
 cover: ## Run coverage and make a report
 	rm -vrf ${OUT_COVER_PATH}
 	${VENV_PATH}/bin/coverage run -m pytest
 	${VENV_PATH}/bin/coverage html
 	if [ -n $$DISPLAY ] ; then xdg-open ${OUT_COVER_PATH}/index.html ; fi
+
+update-coveralls:  ## Manually send last coverage statistics  <coveralls.io>
+	@if [ -n "${SKIP_COVERALLS_UPDATE}" ] ; then echo "DISABLED" && return 0 ; fi
+	${VENV_PATH}/bin/coveralls
+
+depends:  ## Build and display module dependency graph
+	rm -vrf ${OUT_DEPS_PATH}
+	mkdir -p ${OUT_DEPS_PATH}
+	./pydeps.sh ${VENV_PATH}/bin/pydeps ${PROJECT_NAME} ${OUT_DEPS_PATH}
 
 ##
 ## Building / Packaging
@@ -134,7 +141,7 @@ build-dev: demolish-build
 	${VENV_PATH}/bin/python -m build --outdir ${OUT_BUILD_DEV_PATH}
 	sed -E -i "s/^name.+/name = ${PROJECT_NAME_PUBLIC}/" setup.cfg
 
-upload-dev: ## Upload last private build (=> dev registry)
+publish-dev: ## Upload last private build (=> dev registry)
 	${VENV_PATH}/bin/twine \
 	    upload \
 	    --repository testpypi \
@@ -153,7 +160,7 @@ build: ## Create new *public* build
 build: demolish-build
 	${VENV_PATH}/bin/python -m build
 
-upload: ## Upload last *public* build (=> PRIMARY registry)
+publish: ## Upload last *public* build (=> PRIMARY registry)
 	${VENV_PATH}/bin/twine \
 	    upload \
 	    -u ${PYPI_USERNAME} \
