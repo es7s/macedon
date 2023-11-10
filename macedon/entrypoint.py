@@ -7,12 +7,15 @@ import signal
 import sys
 
 import click
+import es7s_commons
 import urllib3
+from click import pass_context
+from es7s_commons import format_path, format_attrs
 from urllib3.exceptions import InsecureRequestWarning
 
 import pytermor as pt
-from . import APP_NAME, APP_VERSION
-from ._common import Options, destroy_state, init_state, get_state
+from . import APP_NAME, APP_VERSION, APP_UPDATED
+from ._common import Options, destroy_state, init_state, get_state, HiddenIntRange
 from .fileparser import destroy_parser, init_parser
 from .io import destroy_io, init_io
 from .logger import destroy_logger, init_logger, get_logger
@@ -39,11 +42,11 @@ def shutdown():
 
 
 def exit_gracefully(signal_code: int, *args):
-    get_logger().debug(f"{signal.Signals(signal_code).name} ({signal_code}) received")
+    get_logger().info(f"{signal.Signals(signal_code).name} ({signal_code}) received")
     if not _shutdown_started:
         shutdown()
         return
-    os._exit(0)
+    os._exit(0)  # noqa
 
 
 class ClickCommand(click.Command):
@@ -98,7 +101,7 @@ class ClickCommand(click.Command):
     "--insecure",
     is_flag=True,
     default=Options.insecure,
-    help="Skip certificate verifying on HTTPS connections.",
+    help="Ignore invalid/expired certificates when performing HTTPS requests.",
 )
 @click.option(
     "-f",
@@ -131,7 +134,7 @@ class ClickCommand(click.Command):
     is_flag=True,
     default=Options.color,
     help="Force output colorizing using ANSI escape sequences or disable it "
-    "unconditionally. If omitted, the application determine it automatically "
+    "unconditionally. If omitted, the application determines it automatically "
     "by checking if the output device is a terminal emulator with SGR support.",
 )
 @click.option(
@@ -144,19 +147,33 @@ class ClickCommand(click.Command):
     "--show-error",
     is_flag=True,
     default=Options.show_error,
-    help="Print a column with error details (when applicable).",
+    help="Print a column with network (not HTTP) error messages, when applicable.",
 )
 @click.option(
     "-v",
     "--verbose",
     count=True,
-    type=click.types.IntRange(min=0, max=3, clamp=True),
+    type=HiddenIntRange(min=0, max=3, clamp=True),
     default=Options.verbose,
-    help="Print more details: -v for request and error details, -vv for "
-         "error stack traces and worker threads diagnostic messages, -vvv "
-         "for input file/response tracing.",
+    help="""\b
+         Increase verbosity:
+             -v for request details and exceptions;
+            -vv for request/response contents and stack traces;
+           -vvv for thread state transition messages.""",
 )
-def callback(**kwargs):
+@click.option(
+    "--version",
+    "-V",
+    "mode_version",
+    count=True,
+    is_eager=True,
+    help="Show the version and exit.",
+)
+def callback(mode_version: bool, **kwargs):
+    if mode_version:
+        invoke_version(value=mode_version, **kwargs)
+        return
+
     options = Options(**kwargs)
     _init(options)
 
@@ -164,6 +181,34 @@ def callback(**kwargs):
     sync.run()
 
     _destroy(options)
+
+
+@pass_context
+def invoke_version(ctx: click.Context, value: int, **kwargs):
+    if not value or ctx.resilient_parsing:
+        return
+    vfmt = lambda s: pt.Fragment(s, "green")
+    ufmt = lambda s: pt.Fragment(s, "gray")
+
+    pt.echo(f"{APP_NAME:>12s}  {vfmt(APP_VERSION):<14s}  {ufmt(APP_UPDATED)}")
+    pt.echo(f"{'pytermor':>12s}  {vfmt(pt.__version__):<14s}  {ufmt(pt.__updated__)}")
+    pt.echo(
+        f"{'es7s-commons':>12s}  {vfmt(es7s_commons.PKG_VERSION):<14s}  {ufmt(es7s_commons.PKG_UPDATED)}"
+    )
+
+    def _echo_path(label: str, path: str):
+        pt.echo(
+            pt.Composite(
+                pt.Text(label + ":", width=17),
+                format_path(path, color=True, repr=False),
+            )
+        )
+
+    if value > 1:
+        pt.echo()
+        _echo_path("Executable", sys.executable)
+        _echo_path("Entrypoint", __file__)
+    ctx.exit()
 
 
 def _init(options: Options):
@@ -193,12 +238,12 @@ def _destroy(options: Options):
     if exit_code:
         exit(exit_code)
 
+
 def _log_init_info(options: Options):
     logger = get_logger()
-    logger.debug(
+    logger.info(
         f"{APP_NAME} {APP_VERSION} "
-        f"PID={os.getpid()} PPID={os.getppid()} "
-        f"UID={os.getuid()} CWD={os.getcwd()}"
+        + format_attrs(dict(PID=os.getpid(), PPID=os.getppid(), UID=os.getuid(), CWD=os.getcwd()))
     )
-    logger.debug(f"Args: {sys.argv!r}")
-    logger.debug(f"Options: {options!r}")
+    logger.debug(f"Args: {format_attrs(sys.argv)}")
+    logger.debug(repr(options))

@@ -1,17 +1,18 @@
-<div align="center">
-   <img src="https://user-images.githubusercontent.com/50381946/211150260-a91aa0c7-f79b-459c-8a37-a92da96a86a2.png" width="96" height="96"><br>
-   <img src="https://user-images.githubusercontent.com/50381946/219900319-d335e85f-5449-4bcf-8f3b-b56eb88f2246.png" width="400" height="64">
-</div>
-
-<div align="center">
-  <img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333">
+<h1 align="center">
+   <!-- es7s/macedon -->
+   <a href="##"><img align="left" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/logo.png?v=2" width="64" height="64"></a>
+   <a href="##"><img align="center" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/label.png" width="200" height="64"></a>
+   <a href="##"><img align="right" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/empty.png" width="64" height="64"></a>
+</h1>
+<div align="right">
+  <a href="##"><img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333"></a>
   <a href="https://pepy.tech/project/macedon/"><img alt="Downloads" src="https://pepy.tech/badge/macedon"></a>
-  <br>
   <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
   <a href='https://coveralls.io/github/es7s/macedon?branch=master'><img src='https://coveralls.io/repos/github/es7s/macedon/badge.svg?branch=master' alt='Coverage Status' /></a>
   <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+  <a href="##"><img src="https://wakatime.com/badge/user/8eb9e217-791b-436f-b729-81eb63e84b08/project/1d26a427-aecb-4192-965d-119e9a86cdd9.svg"></a>
 </div>
-<h1> </h1>
+<br>
 
 
 Multi-threaded CLI web service availability verifier. Takes a list of endpoints with optional input dataset, performs series of HTTP requests and displays the results.

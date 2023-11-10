@@ -11,37 +11,35 @@ from logging import (
     StreamHandler,
     getLogger,
 )
-from typing import Mapping
-
 import pytermor as pt
 from ._common import Options
 from .io import get_stderr
 
-TRACE = 5
+TRACE = 15
 
 VERBOSITY_LOG_LEVELS = {
     0: logging.CRITICAL,
     1: logging.INFO,
-    2: logging.DEBUG,
-    3: TRACE,
+    2: TRACE,
+    3: logging.DEBUG,
 }
 
 
 class Logger(BaseLogger):
-    def trace(self, msg, *args, **kwargs):
-        self.log(level=TRACE, msg="\n" + msg, *args, **kwargs)
+    def trace(self, msg: str, *args, **kwargs):
+        self.log(level=TRACE, msg=msg, *args, **kwargs)
 
-    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1) -> None:
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
         if level > logging.INFO:
             # for any warning/error/critical:
             if exc_info:
                 # show stack traces if verbosity>=2 (-vv), except ...
-                exc_info = (self.level <= logging.DEBUG)
+                exc_info = self.level <= TRACE
             else:
                 # ... when exc_info was manually disabled (requests' errors),
                 # in which case show traces only at max level verbosity (-vvv)
-                exc_info = (self.level <= TRACE)
-        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+                exc_info = self.level <= logging.DEBUG
+        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)  # noqa
 
 
 _logger: Logger | None = None
@@ -72,15 +70,8 @@ def init_logger(options: Options) -> Logger:
     _handler.setLevel(log_level)
     _logger.addHandler(_handler)
     _logger.setLevel(log_level)
-
-    # pt_logger = getLogger("pytermor")
-    # handler = StreamHandler(sys.stderr)
-    # handler.setFormatter(PytermorFormatter(options))
-    # handler.setLevel(log_level)
-    # pt_logger.addHandler(handler)
-    # pt_logger.setLevel(log_level)
-
     return _logger
+
 
 def destroy_logger():
     global _logger
@@ -100,9 +91,7 @@ class LogRecord(BaseLogRecord):
         func: str | None = ...,
         sinfo: str | None = ...,
     ) -> None:
-        super().__init__(
-            name, level, pathname, lineno, msg, args, exc_info, func, sinfo
-        )
+        super().__init__(name, level, pathname, lineno, msg, args, exc_info, func, sinfo)
         self.rel_created_str = pt.format_time_delta(self.relativeCreated / 1000, 6)
 
 
@@ -123,8 +112,8 @@ class PytermorFormatter(Formatter):
 class SgrFormatter(Formatter):
     # fmt: off
     LEVEL_TO_FMT_MAP: dict[int, pt.FT] = {
-        TRACE:              pt.Style(fg=pt.Color256.get_by_code(60)),
         logging.DEBUG:      pt.Style(fg=pt.Color256.get_by_code(66)),
+        TRACE:              pt.Style(fg=pt.Color256.get_by_code(60)),
         logging.INFO:       pt.cv.WHITE,
         logging.WARNING:    pt.cv.YELLOW,
         logging.ERROR:      pt.cv.RED,

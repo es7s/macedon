@@ -26,7 +26,7 @@ include ${DOTENV_DIST}
 export
 VERSION ?= 0.0.0
 
-NOW    := $(shell date '+%Y-%b-%0e.%H%M%S.%3N')
+NOW    := $(shell LC_TIME=en_US.UTF-8 date --rfc-3339=seconds)
 BOLD   := $(shell tput -Txterm bold)
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -52,8 +52,9 @@ reinit-venv:  ## > Prepare environment for module building  <venv>
 	rm -vrf ${VENV_PATH}
 	if [ ! -f .env.build ] ; then cp -u ${DOTENV_DIST} ${DOTENV} && sed -i -Ee '/^VERSION=/d' ${DOTENV} ; fi
 	${HOST_DEFAULT_PYTHON} -m venv ${VENV_PATH}
-	${HOST_DEFAULT_PYTHON} -m pip install pipx
-	${VENV_PATH}/bin/pip install -r requirements.txt -r requirements-dev.txt
+	${VENV_PATH}/bin/pip install -e .
+	${VENV_PATH}/bin/pip install -r requirements-dev.txt
+	${VENV_PATH}/bin/python -m $(PROJECT_NAME) --version
 
 all:   ## Prepare, run tests, generate docs and reports, build module
 all: reinit-build test coverage build
@@ -88,6 +89,7 @@ set-version: show-version
 	sed -E -i "s/^VERSION.+/VERSION=$$VERSION/" ${DOTENV_DIST}
 	sed -E -i "s/^version.+/version = $$VERSION/" setup.cfg
 	sed -E -i "s/^__version__.+/__version__ = \"$$VERSION\"/" ${PROJECT_NAME}/_version.py
+	sed -E -i 's/^(__updated__).+/\1 = "${NOW}"/w/dev/stdout' ${PROJECT_NAME}/_version.py | cut -f2 -d'"'
 	echo "Updated version: ${GREEN}$$VERSION${RESET}"
 
 purge-cache:  ## Clean up pycache

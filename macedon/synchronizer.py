@@ -73,6 +73,6 @@ class Synchronizer:
         state = get_state()
         threads = state.options.threads
 
-        state.worker_states.extend(["init"] * threads)
+        state.worker_states.extend(["initial"] * threads)
         for idx in range(threads):
             self._workers.append(Worker(self._task_pool, idx))
