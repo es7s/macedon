@@ -43,11 +43,15 @@ def init_io(options: Options) -> tuple[IoProxy, IoProxy]:
     pt.RendererManager.set_default(_stdout.renderer)
     return _stdout, _stderr
 
+
 def destroy_io():
     global _stdout, _stderr
-    _stdout.destroy()
-    _stderr.destroy()
+    if _stdout:
+        _stdout.destroy()
+    if _stderr:
+        _stderr.destroy()
     _stdout = _stderr = None
+
 
 class IoProxy:
     def __init__(self, color_option: bool, io: t.IO):
@@ -70,7 +74,7 @@ class IoProxy:
         return self._renderer
 
     def render(self, string: pt.RT = "", fmt: pt.FT = None) -> str:
-        return pt.render(string, fmt, self._renderer, no_log=self._is_stderr)
+        return pt.render(string, fmt, self._renderer)
 
     def echo_rendered(self, string: pt.RT = "", fmt: pt.FT = None):
         self.echo(self.render(string, fmt))

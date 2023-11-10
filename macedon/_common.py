@@ -9,7 +9,9 @@ from collections import deque
 from dataclasses import dataclass, field
 from threading import Event, Lock
 
+import click
 import psutil
+import pytermor as pt
 from requests.structures import CaseInsensitiveDict
 
 _state: State | None = None
@@ -92,3 +94,17 @@ class Task:
     method: str = "GET"
     headers: CaseInsensitiveDict = None
     body: str = None
+
+
+class FixedWidthStringWrapper(pt.StringReplacerChain):
+    def __init__(self, width: int = 80):
+        super().__init__(
+            "(?s).+",
+            pt.StringReplacer(R"\s+", " "),
+            pt.StringReplacer(fR"(.{{{width}}})", r"\1\n"),
+        )
+
+
+class HiddenIntRange(click.IntRange):
+    def _describe_range(self) -> str:
+        return ""

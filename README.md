@@ -1,17 +1,18 @@
-<div align="center">
-   <img src="https://user-images.githubusercontent.com/50381946/211150260-a91aa0c7-f79b-459c-8a37-a92da96a86a2.png" width="96" height="96"><br>
-   <img src="https://user-images.githubusercontent.com/50381946/219900319-d335e85f-5449-4bcf-8f3b-b56eb88f2246.png" width="400" height="64">
-</div>
-
-<div align="center">
-  <img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333">
+<h1 align="center">
+   <!-- es7s/macedon -->
+   <a href="##"><img align="left" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/logo.png?v=2" width="64" height="64"></a>
+   <a href="##"><img align="center" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/label.png" width="200" height="64"></a>
+   <a href="##"><img align="right" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/empty.png" width="64" height="64"></a>
+</h1>
+<div align="right">
+  <a href="##"><img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333"></a>
   <a href="https://pepy.tech/project/macedon/"><img alt="Downloads" src="https://pepy.tech/badge/macedon"></a>
-  <br>
   <a href="https://pypi.org/project/macedon/"><img alt="PyPI" src="https://img.shields.io/pypi/v/macedon"></a>
   <a href='https://coveralls.io/github/es7s/macedon?branch=master'><img src='https://coveralls.io/repos/github/es7s/macedon/badge.svg?branch=master' alt='Coverage Status' /></a>
   <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+  <a href="##"><img src="https://wakatime.com/badge/user/8eb9e217-791b-436f-b729-81eb63e84b08/project/1d26a427-aecb-4192-965d-119e9a86cdd9.svg"></a>
 </div>
-<h1> </h1>
+<br>
 
 
 Multi-threaded CLI web service availability verifier. Takes a list of endpoints with optional input dataset, performs series of HTTP requests and displays the results.
@@ -42,7 +43,7 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -n, --amount INTEGER          How many times each request will be performed.  [default: 1]
       -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
-      -i, --insecure                Skip certificate verifying on HTTPS connections.
+      -i, --insecure                Ignore invalid/expired certificates when performing HTTPS requests.
       -f, --file FILENAME           Execute request(s) from a specified file, or from stdin, if FILENAME specified as '-'.
                                     The file should contain a list of endpoints in the format '{method} {url}', one per
                                     line. Another (partially) supported format is JetBrains HTTP Client format (see
@@ -56,12 +57,15 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
                                     terminated under normal conditions, regardless of an actual HTTP codes; but it can
                                     still die with a non-zero code upon invalid option syntax, etc).
       -c, --color / -C, --no-color  Force output colorizing using ANSI escape sequences or disable it unconditionally. If
-                                    omitted, the application determine it automatically by checking if the output device
+                                    omitted, the application determines it automatically by checking if the output device
                                     is a terminal emulator with SGR support.
       --show-id                     Print a column with request serial number.
-      --show-error                  Print a column with error details (when applicable).
-      -v, --verbose                 Print more details: -v for request and error details, -vv for error stack traces and
-                                    worker threads diagnostic messages, -vvv for input file/response tracing.  [0<=x<=3]
+      --show-error                  Print a column with network (not HTTP) error messages, when applicable.
+      -v, --verbose                 Increase verbosity:
+                                        -v for request details and exceptions;
+                                       -vv for request/response contents and stack traces;
+                                      -vvv for thread state transition messages.
+      -V, --version                 Show the version and exit.
       --help                        Show this message and exit.
 
 

@@ -9,6 +9,7 @@ import typing
 from datetime import timedelta
 import threading as th
 
+from es7s_commons import median
 import requests
 
 import pytermor as pt
@@ -30,6 +31,7 @@ def init_printer() -> Printer:
     global _printer
     _printer = Printer()
     return _printer
+
 
 def destroy_printer():
     global _printer
@@ -65,9 +67,9 @@ class Printer:
         )
         self._progress_table: pt.SimpleTable = pt.SimpleTable(sep="")
 
-        self._size_formatter: pt.StaticBaseFormatter | None = None
-        self._elapsed_formatter: pt.StaticBaseFormatter | None = None
-        self._progress_formatter: pt.StaticBaseFormatter | None = None
+        self._size_formatter: pt.StaticFormatter | None = None
+        self._elapsed_formatter: pt.StaticFormatter | None = None
+        self._progress_formatter: pt.StaticFormatter | None = None
 
     def print_prolog(self):
         req_total = self._state.requests_total.value
@@ -85,9 +87,7 @@ class Printer:
         self._print_separator()
         self._print_progress(True)
 
-    def print_completed_request(
-        self, task: Task, response: requests.Response, request_id: int
-    ):
+    def print_completed_request(self, task: Task, response: requests.Response, request_id: int):
         size = 0
         try:
             size = len(response.content)
@@ -125,9 +125,7 @@ class Printer:
         self._lock.release()
 
     def print_shutdown(self):
-        msg = pt.Text(
-            "Shutting threads down (Ctrl+C again to force)", pt.Styles.WARNING
-        )
+        msg = pt.Text("Shutting threads down (Ctrl+C again to force)", pt.Styles.WARNING)
         self._lock.acquire()
         self._print_row(msg)
         self._lock.release()
@@ -152,7 +150,7 @@ class Printer:
 
         avg_latency_fmtd = pt.Text("---", self.NO_VAL_ST, width=5, align="right")
         if self._state.requests_latency:
-            avg_latency = pt.utilmisc.median(self._state.requests_latency)
+            avg_latency = median(self._state.requests_latency)
             avg_latency_fmtd = self._format_elapsed(timedelta(seconds=avg_latency))
 
         self._reset_cursor_x()
@@ -209,7 +207,7 @@ class Printer:
     def _reset_cursor_x(self):
         if not self._is_format_allowed:
             return
-        get_stdout().echo(pt.ansi.make_set_cursor_x_abs(1).assemble(), newline=False)
+        get_stdout().echo(pt.make_set_cursor_column(1).assemble(), newline=False)
 
     def _get_table_width(self) -> int:
         if self._is_format_allowed:
@@ -248,26 +246,26 @@ class Printer:
 
     def _format_size(self, size: int) -> pt.Text:
         if not self._size_formatter:
-            self._size_formatter = pt.StaticBaseFormatter(
+            self._size_formatter = pt.StaticFormatter(
                 max_value_len=3,
                 unit="b",
                 unit_separator="",
                 allow_negative=False,
                 discrete_input=True,
                 pad=True,
-                color=self._is_format_allowed,
+                auto_color=self._is_format_allowed,
             )
         return self._size_formatter.format(size)
 
     def _format_elapsed(self, elapsed: timedelta | int | float) -> RT:
         if not self._elapsed_formatter:
-            self._elapsed_formatter = pt.StaticBaseFormatter(
+            self._elapsed_formatter = pt.StaticFormatter(
                 max_value_len=3,
                 allow_negative=False,
                 unit="s",
                 unit_separator="",
                 pad=True,
-                color=self._is_format_allowed,
+                auto_color=self._is_format_allowed,
             )
         if isinstance(elapsed, (int, float)):
             seconds = elapsed / 1e9
@@ -284,12 +282,12 @@ class Printer:
 
         label = Fragment("#", self.REQUEST_ID_LABEL_ST)
         result = Fragment(f"{request_id:>d}", self.REQUEST_ID_ST)
-        max_width = self._get_max_req_id_length() + len(str(label.string))
+        max_width = self._get_max_req_id_length() + len(label)
         return pt.Text(label, result, width=max_width, align="right")
 
     def _format_progress(self, pre: bool = False) -> pt.Text:
         if not self._progress_formatter:
-            self._progress_formatter = pt.StaticBaseFormatter(
+            self._progress_formatter = pt.StaticFormatter(
                 max_value_len=3,
                 allow_negative=False,
                 allow_fractional=False,
@@ -297,7 +295,7 @@ class Printer:
                 unit="%",
                 pad=True,
                 prefixes=[None, ""],
-                color=self._is_format_allowed,
+                auto_color=self._is_format_allowed,
             )
         original_val = (
             100
@@ -317,9 +315,7 @@ class Printer:
         result = f"{label}{current:>{max_id_width}d}/{total:<{max_id_width}d}"
         return pt.Text(result, width=max_id_width * 2 + len(str(label)) + 1)
 
-    def _format_url(
-        self, url: str, method: str, ok: bool, exception: Exception = None
-    ) -> pt.Text:
+    def _format_url(self, url: str, method: str, ok: bool, exception: Exception = None) -> pt.Text:
         method_len = max(len(m) for m in self._state.used_methods)
         method_st = self.METHOD_OK_ST if ok else self.METHOD_NOK_ST
         url_st = self.URL_OK_ST if ok else self.URL_NOK_ST
