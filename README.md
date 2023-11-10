@@ -43,7 +43,7 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -n, --amount INTEGER          How many times each request will be performed.  [default: 1]
       -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
-      -i, --insecure                Skip certificate verifying on HTTPS connections.
+      -i, --insecure                Ignore invalid/expired certificates when performing HTTPS requests.
       -f, --file FILENAME           Execute request(s) from a specified file, or from stdin, if FILENAME specified as '-'.
                                     The file should contain a list of endpoints in the format '{method} {url}', one per
                                     line. Another (partially) supported format is JetBrains HTTP Client format (see
@@ -57,12 +57,15 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
                                     terminated under normal conditions, regardless of an actual HTTP codes; but it can
                                     still die with a non-zero code upon invalid option syntax, etc).
       -c, --color / -C, --no-color  Force output colorizing using ANSI escape sequences or disable it unconditionally. If
-                                    omitted, the application determine it automatically by checking if the output device
+                                    omitted, the application determines it automatically by checking if the output device
                                     is a terminal emulator with SGR support.
       --show-id                     Print a column with request serial number.
-      --show-error                  Print a column with error details (when applicable).
-      -v, --verbose                 Print more details: -v for request and error details, -vv for error stack traces and
-                                    worker threads diagnostic messages, -vvv for input file/response tracing.  [0<=x<=3]
+      --show-error                  Print a column with network (not HTTP) error messages, when applicable.
+      -v, --verbose                 Increase verbosity:
+                                        -v for request details and exceptions;
+                                       -vv for request/response contents and stack traces;
+                                      -vvv for thread state transition messages.
+      -V, --version                 Show the version and exit.
       --help                        Show this message and exit.
 
 
