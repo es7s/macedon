@@ -2,19 +2,41 @@
 Changelog
 ============
 
+.. default-role:: code
+
 This project uses Semantic Versioning -- https://semver.org
+
+-----------
+*<current>*
+-----------
+- 🐞 FIX: panik on invalid schema url
+
+0.12.0
+------
+
+- 💎 REFACTOR: verbose logging
+- 🆙 UPDATE: got rid of embedded `pytermor` pkg
+- 🆙 UPDATE: `pytermor` updated to 2.106
+- 🐞 FIX: dependencies
+
+0.11.0
+------
+
+- 💎 REFACTOR: exception logging, input file handling
+- 🧪 TESTS: fixed coverage counting
+- 🔧 MAINTAIN: `update-help-usage` script
 
 0.10.0
 ------
 
-- 🌱 NEW: ``--exit-code`` option
+- 🌱 NEW: `--exit-code` option
 - 📙 DOCS: add proxy configuration guide
 
 0.9.11
 ------
 
 - 🐞 FIX: full output when no terminal attached
-- 🌱 NEW: ``--insecure`` option
+- 🌱 NEW: `--insecure` option
 
 0.9.10
 -------
@@ -49,7 +71,8 @@ This project uses Semantic Versioning -- https://semver.org
 
 - Implementation of all intended features.
 
-0.9.0
--------
+
+0.9.0 `                Jan 23`
+------------------------------
 
 - Core

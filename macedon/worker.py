@@ -67,9 +67,9 @@ class Worker(t.Thread):
             time_before = time_after = time.time_ns()
             try:
                 response = requests.request(task.method, task.url, **request_params)
-            except urllib3.exceptions.InsecureRequestWarning as e:
+            except urllib3.exceptions.HTTPWarning as e:
                 logger.warning(e)
-            except requests.exceptions.RequestException as e:
+            except (urllib3.exceptions.HTTPError, requests.exceptions.RequestException) as e:
                 time_after = time.time_ns()
                 logger.exception(e, exc_info=False)
                 exception = e
