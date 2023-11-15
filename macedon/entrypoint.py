@@ -3,6 +3,7 @@
 #  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 import os
+import re
 import signal
 import sys
 
@@ -167,7 +168,7 @@ class ClickCommand(click.Command):
     "mode_version",
     count=True,
     is_eager=True,
-    help="Show the version and exit.",
+    help="Show the version and exit. Specify twice (-VV) to see interpreter and entrypoint paths.",
 )
 def callback(mode_version: bool, **kwargs):
     if mode_version:
@@ -185,10 +186,49 @@ def callback(mode_version: bool, **kwargs):
 
 @pass_context
 def invoke_version(ctx: click.Context, value: int, **kwargs):
+    """
+     ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+    ▕ ₑₛ₇ₛ                  ...         v ▏
+    ▕ .  .  .. . # .Y .YYY Y::^  ..  .  . ▏
+    ▕ #  # #^^#^ #Y:  :YY  #^^# #^^# # .Y ▏
+    ▕ #YYY  YY^Y Y ^Y ^YYY ^YY^ ^YY^ YY^  ▏
+    ▕ Y                                   ▏
+     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔"""
     if not value or ctx.resilient_parsing:
         return
     vfmt = lambda s: pt.Fragment(s, "green")
     ufmt = lambda s: pt.Fragment(s, "gray")
+
+    regex = re.compile('(?m)([:Y]+)|([.#]+)|([\^]+)|([▔▏]+)|([▁▕]+)|( *v)')
+    prim_st = pt.Style(fg=pt.cvr.ICATHIAN_YELLOW)
+    group_colors = [
+        pt.Style(prim_st, bg=pt.cvr.DIRT_BROWN),
+        prim_st,
+        pt.cvr.DIRT_BROWN,
+        pt.cvr.ATOMIC_TANGERINE,
+        pt.cvr.YELLOW_PANIK,
+        pt.NOOP_COLOR,
+    ]
+
+    def replace(m: re.Match) -> str:
+        def _iter(m: re.Match) -> str:
+            for g, st in zip(m.groups(), group_colors):
+                yield "".join(pt.render(g or "", st))
+
+        version = es7s_commons.to_subscript(str(APP_VERSION)).rsplit(".", 1)[0]
+        result = "".join(_iter(m))
+        for f, t in [
+            (".", "▄"),
+            (":", "▄"),
+            ('^', "▀"),
+            ("Y", "▀"),
+            ("#", "█"),
+            (pt.pad(len(version) - 1) + "v", version),
+        ]:
+            result = result.replace(f, t)
+        return result
+
+    pt.echo(regex.sub(replace, invoke_version.__doc__))
 
     pt.echo(f"{APP_NAME:>12s}  {vfmt(APP_VERSION):<14s}  {ufmt(APP_UPDATED)}")
     pt.echo(f"{'pytermor':>12s}  {vfmt(pt.__version__):<14s}  {ufmt(pt.__updated__)}")
@@ -199,14 +239,14 @@ def invoke_version(ctx: click.Context, value: int, **kwargs):
     def _echo_path(label: str, path: str):
         pt.echo(
             pt.Composite(
-                pt.Text(label + ":", width=17),
+                pt.fit(label + ":  ", 14, align=">"),
                 format_path(path, color=True, repr=False),
             )
         )
 
     if value > 1:
         pt.echo()
-        _echo_path("Executable", sys.executable)
+        _echo_path("Interpreter", sys.executable)
         _echo_path("Entrypoint", __file__)
     ctx.exit()
 

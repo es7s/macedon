@@ -1,8 +1,7 @@
 <h1 align="center">
    <!-- es7s/macedon -->
-   <a href="##"><img align="left" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/logo.png?v=2" width="64" height="64"></a>
+   <a href="##"><img align="left" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/logo.png?v=2" width="96" height="96"></a>
    <a href="##"><img align="center" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/es7s/macedon/label.png" width="200" height="64"></a>
-   <a href="##"><img align="right" src="https://s3.eu-north-1.amazonaws.com/dp2.dl/readme/empty.png" width="64" height="64"></a>
 </h1>
 <div align="right">
   <a href="##"><img src="https://img.shields.io/badge/python-3.10-3776AB?logo=python&logoColor=white&labelColor=333333"></a>
