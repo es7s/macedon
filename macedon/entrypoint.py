@@ -9,12 +9,12 @@ import sys
 
 import click
 import es7s_commons
+import pytermor as pt
 import urllib3
 from click import pass_context
-from es7s_commons import format_path, format_attrs
+from es7s_commons import format_path, format_attrs, to_subscript
 from urllib3.exceptions import InsecureRequestWarning
 
-import pytermor as pt
 from . import APP_NAME, APP_VERSION, APP_UPDATED
 from ._common import Options, destroy_state, init_state, get_state, HiddenIntRange
 from .fileparser import destroy_parser, init_parser
@@ -58,10 +58,7 @@ class ClickCommand(click.Command):
     cls=ClickCommand,
     no_args_is_help=True,
     context_settings=dict(max_content_width=pt.get_preferable_wrap_width()),
-    epilog="""JetBrains HTTP Client format is described here: 
-\b
-
-    https://jetbrains.com/help/idea/exploring-http-syntax.html""",
+    epilog="JetBrains HTTP Client file format: https://jetbrains.com/help/idea/exploring-http-syntax.html",
 )
 @click.argument("ENDPOINT_URL", type=str, nargs=-1)
 @click.option(
@@ -110,7 +107,7 @@ class ClickCommand(click.Command):
     multiple=True,
     type=click.types.File(),
     help="Execute request(s) from a specified file, or from stdin, if FILENAME "
-    "specified as '-'. The file should contain a list of endpoints in the format "
+    "is specified as '-'. The file should contain a list of endpoints in the format "
     "'{method} {url}', one per line. Another (partially) supported format is "
     "JetBrains HTTP Client format (see below), which additionally allows to "
     "specify request headers and/or body. The option can be specified multiple times. "
@@ -159,8 +156,8 @@ class ClickCommand(click.Command):
     help="""\b
          Increase verbosity:
              -v for request details and exceptions;
-            -vv for request/response contents and stack traces;
-           -vvv for thread state transition messages.""",
+            -vv for request/response contents and headers;
+           -vvv for exception stack traces and thread state transitions.""",
 )
 @click.option(
     "--version",
@@ -186,20 +183,30 @@ def callback(mode_version: bool, **kwargs):
 
 @pass_context
 def invoke_version(ctx: click.Context, value: int, **kwargs):
+    # fmt: off
     """
-     ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
-    ▕ ₑₛ₇ₛ                  ...         v ▏
-    ▕ .  .  .. . # .Y .YYY Y::^  ..  .  . ▏
-    ▕ #  # #^^#^ #Y:  :YY  #^^# #^^# # .Y ▏
-    ▕ #YYY  YY^Y Y ^Y ^YYY ^YY^ ^YY^ YY^  ▏
-    ▕ Y                                   ▏
-     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔"""
+      ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+     ▕ ₑₛ₇ₛ                  ...           ▏
+     ▕ .  .  .. . & .Y .YYY Y::^  ..  .  . ▏
+     ▕ &  & &^^&^ &Y:  :YY  &^^& &^^& & .Y ▏
+     ▕ &YYY ^YY^Y Y ^Y ^YYY ^YY^ ^YY^ YY^  ▏
+     ▕ Y                                 v ▏
+      ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔"""
+    # fmt: on
     if not value or ctx.resilient_parsing:
         return
+    CHAR_MAP = {
+        ".": "▄",
+        ":": "▄",
+        "^": "▀",
+        "Y": "▀",
+        "&": "█",
+    }
+
     vfmt = lambda s: pt.Fragment(s, "green")
     ufmt = lambda s: pt.Fragment(s, "gray")
 
-    regex = re.compile('(?m)([:Y]+)|([.#]+)|([\^]+)|([▔▏]+)|([▁▕]+)|( *v)')
+    regex = re.compile(R"(?m)([:Y]+)|([.&]+)|(\^+)|([▔▏]+)|([▁▕]+)|( *v)")
     prim_st = pt.Style(fg=pt.cvr.ICATHIAN_YELLOW)
     group_colors = [
         pt.Style(prim_st, bg=pt.cvr.DIRT_BROWN),
@@ -215,14 +222,10 @@ def invoke_version(ctx: click.Context, value: int, **kwargs):
             for g, st in zip(m.groups(), group_colors):
                 yield "".join(pt.render(g or "", st))
 
-        version = es7s_commons.to_subscript(str(APP_VERSION)).rsplit(".", 1)[0]
+        version = to_subscript(".".join(APP_VERSION.rsplit(".")[:2]))
         result = "".join(_iter(m))
-        for f, t in [
-            (".", "▄"),
-            (":", "▄"),
-            ('^', "▀"),
-            ("Y", "▀"),
-            ("#", "█"),
+        for (f, t) in [
+            *CHAR_MAP.items(),
             (pt.pad(len(version) - 1) + "v", version),
         ]:
             result = result.replace(f, t)

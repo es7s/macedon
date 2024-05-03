@@ -4,7 +4,9 @@
 # -----------------------------------------------------------------------------
 import re
 import typing as t
+from functools import partial
 
+import pytermor as pt
 from requests.structures import CaseInsensitiveDict
 
 from ._common import Task
@@ -12,6 +14,11 @@ from .logger import get_logger
 
 
 class FileParser:
+    # language=regexp
+    METHOD_URL_REGEX = R"\s*([A-Z]+)\s+(https?://\S+)\s*"
+    # language=regexp
+    HEADER_REGEX = R"\s*([a-zA-Z0-9_-]+):(.+)\s*"
+
     def parse(self, file: t.TextIO):
         data = file.read()
         try:
@@ -21,9 +28,9 @@ class FileParser:
 
     def _parse(self, data: str, file_name: str) -> t.Iterable[Task]:
         get_logger().trace(f"Parsing {file_name!r}" + '\n' + data)
-
-        lines = data.splitlines()
-        if all(re.fullmatch(R"^\s*$|^\S+\s+\S+$", line) for line in lines):
+        
+        lines = [*pt.filterf([l.strip() for l in data.splitlines()])]
+        if all(map(partial(re.fullmatch, self.METHOD_URL_REGEX), lines)):
             yield from self._parse_plain(lines)
         else:
             yield from self._parse_jb_http_file(data)
@@ -45,9 +52,7 @@ class FileParser:
         for idx, request in enumerate(request_filtered_list):
             lines, last_empty_idx = self._filter_jb_http_file_lines(request.splitlines())
             url, method = self._extract_method_url(lines[0])
-            headers = CaseInsensitiveDict(
-                {k.strip(): v.strip() for k, v in self._extract_headers(lines[1:last_empty_idx])}
-            )
+            headers = CaseInsensitiveDict(self._extract_headers(lines[1:last_empty_idx]))
             body = None
             if last_empty_idx is not None:
                 body_lines = lines[last_empty_idx:]
@@ -57,37 +62,34 @@ class FileParser:
 
     def _filter_jb_http_file_lines(
         self,
-        lines: list[str],
+        inp: list[str],
     ) -> tuple[list[str], int | None]:
         last_empty_line_idx = None
 
-        def _filter(line: str) -> bool:
-            return not line.startswith("#")
-
-        def _normalize(line: str, idx: int) -> str:
-            nonlocal last_empty_line_idx
+        interm = [s for s in inp if not s.startswith("#")]
+        outp = []
+        for idx, line in enumerate(interm):
             if re.match(r"^\s*$", line):
                 last_empty_line_idx = idx
-                return ""
-            return line
+                outp.append("")
+            outp.append(line)
 
-        filtered = [*filter(_filter, lines)]
-        normalized = [_normalize(line, idx) for idx, line in enumerate(filtered)]
+        return outp, last_empty_line_idx
 
-        return normalized, last_empty_line_idx
-
-    def _extract_method_url(self, line: str) -> list[str, str]:
-        if re.match(r"^([A-Z]+)\s+(https?://\S+$)", line):
-            result = [*reversed(line.split(" ", 1))]
-            return result
-        raise ValueError(f"Invalid format, expected '{{method}} http(s)?://{{url}}', got: '{line}'")
+    def _extract_method_url(self, line: str) -> tuple[str, str]:
+        if re.match(self.METHOD_URL_REGEX, line):
+            method, _, url = line.partition(" ")
+            return url, method
+        raise ValueError(f"Invalid format, expected '{{method}} http(s)?://{{url}}', got: {line!r}")
 
     def _extract_headers(self, lines: list[str]) -> t.Iterable[tuple[str, str]]:
         for line in lines:
-            if not (m := re.match(r"^([a-zA-Z0-9_-]+):(.+)$", line)):
+            if not (m := re.match(self.HEADER_REGEX, line)):
                 continue
-            header = m.group(1, 2)
-            yield header
+            key = m.group(1).strip()
+            value = m.group(2).strip()
+            if value:
+                yield key, value
 
 
 def get_parser():
