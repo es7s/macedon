@@ -1,9 +1,68 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "macedon"
+dynamic = ["version"]
+description = "CLI web service availability verifier"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+platforms = ["linux"]
+keywords = [
+    "cli", "terminal", "console", "web",
+    "web-service", "check", "healthcheck",
+    "request", "http", "https", "socks",
 ]
-build-backend = "setuptools.build_meta"
+authors = [
+    { name = "Aleksandr Shavykin", email = "0.delameter@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Terminals",
+]
+dependencies = [
+    "click~=8.1.3",
+    "es7s-commons~=1.3.1",
+    "psutil~=5.9.4",
+    "pytermor~=2.106.6.dev0",
+    "requests~=2.28.2",
+]
+
+[project.optional-dependencies]
+socks = [
+    "requests[socks]",
+]
+
+[project.scripts]
+macedon = "macedon.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/es7s/macedon"
+
+# ---------------------------------------------------------
+# build
+
+[tool.hatch.publish.index]
+disable = false
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/macedon",
+    "/tests",
+]
+
+[tool.hatch.version]
+path = "macedon/_version.py"
 
 # ---------------------------------------------------------
 # lint, pytest

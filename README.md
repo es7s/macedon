@@ -13,29 +13,48 @@
 </div>
 <br>
 
-
 Multi-threaded CLI web service availability verifier. Takes a list of endpoints with optional input dataset, performs series of HTTP requests and displays the results.
 
+<blockquote>
+ <details>
+  <summary><b>Motivation</b></summary>
+  Necessity to have a fast and configurable endpoint testing tool at fingertips.
+ </details>
+</blockquote>
 
-## Motivation
+Installation
+--------------
 
-Necessity to have a fast and configurable endpoint testing tool at fingertips.
+#### With [pipx](https://github.com/pypa/pipx)
+```bash
+$ pipx install macedon
+```
 
+#### Manually
+```bash
+$ git clone https://github.com/es7s/macedon.git
+$ cd macedon
+$ python -m venv venv
+$ ./venv/bin/pip install .
+$ ln -s $(pwd)/run ~/.local/bin/macedon
+```
 
-## Installation
+Basics
+------------
 
-    pipx install macedon
-
-
-## Basic usage
+In the following example we are telling the application to make 4 sequential requests to `192.168.1.2` on port 80 (`GET /` by default);
+the number of threads is determined automatically by the number of logical cores of host CPU (`-T` option overrides this number).
 
 ![image](https://user-images.githubusercontent.com/50381946/211187585-2e932cde-f8f6-4d91-9769-962b6efdfe07.png)
+                                                                     
 
+Options
+---------------
 
-## Configuration / Advanced usage
+    Usage:
 
-    Usage: macedon [OPTIONS] [ENDPOINT_URL]...
-    
+       macedon [OPTIONS] [ENDPOINT_URL]...
+
     Options:
       -T, --threads INTEGER         Number of threads for concurrent request making. Default value depends on number of
                                     CPU cores available in the system.  [default: 6]
@@ -43,9 +62,9 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       -d, --delay FLOAT             Seconds to wait between requests.  [default: 0]
       -t, --timeout FLOAT           Seconds to wait for the response.  [default: 10]
       -i, --insecure                Ignore invalid/expired certificates when performing HTTPS requests.
-      -f, --file FILENAME           Execute request(s) from a specified file, or from stdin, if FILENAME specified as '-'.
-                                    The file should contain a list of endpoints in the format '{method} {url}', one per
-                                    line. Another (partially) supported format is JetBrains HTTP Client format (see
+      -f, --file FILENAME           Execute request(s) from a specified file, or from stdin, if FILENAME is specified as
+                                    '-'. The file should contain a list of endpoints in the format '{method} {url}', one
+                                    per line. Another (partially) supported format is JetBrains HTTP Client format (see
                                     below), which additionally allows to specify request headers and/or body. The option
                                     can be specified multiple times. Note that ENDPOINT_URL argument(s) are ignored if
                                     this option is present.
@@ -62,74 +81,145 @@ Necessity to have a fast and configurable endpoint testing tool at fingertips.
       --show-error                  Print a column with network (not HTTP) error messages, when applicable.
       -v, --verbose                 Increase verbosity:
                                         -v for request details and exceptions;
-                                       -vv for request/response contents and stack traces;
-                                      -vvv for thread state transition messages.
-      -V, --version                 Show the version and exit.
+                                       -vv for request/response contents and headers;
+                                      -vvv for exception stack traces and thread state transitions.
+      -V, --version                 Show the version and exit. Specify twice (-VV) to see interpreter and entrypoint
+                                    paths. If stdout is not a terminal, print only app version number without labels or
+                                    timestamps.
       --help                        Show this message and exit.
+    
+
+Headers, body, authorization
+----------------------------
+
+Request metadata can be specified using **JetBrains [HTTP syntax](https://jetbrains.com/help/idea/exploring-http-syntax.html)** (note that support is [very limited](#http-syntax)) using either:
+
+1. a helper data file (see [example.http](./example.http)):
+
+   ```bash
+   $ macedon -T1 -vv -f req1.http
+   ```
+
+2. `bash` and *stdin* (all three commands are equivalent):
+
+   ```bash
+   $ macedon -f - <<<$'GET http://2ip.ru\nUser-Agent: curl/7.68.0'
+   
+   $ macedon -f - <<<'GET http://2ip.ru
+   User-Agent: curl/7.68.0'
+   
+   $ echo -e 'GET http://2ip.ru \n User-Agent: curl/7.68.0' | macedon -f -
+   ```
+   
+### HTTP Syntax
+
+Supported features include:
+
+   * Method (GET/POST/etc)
+   * Request headers
+   * Request body
+   * `#` comments
+
+General syntax:
+
+```
+# Request name / description (optional)
+Method Request-URI
+Header-field: Header-value
+
+Request-Body
+```
 
 
-JetBrains HTTP Client format is described [here](https://jetbrains.com/help/idea/exploring-http-syntax.html). Also see [example.http](./example.http).
-
-
-## Proxy configuration
+Proxy configuration
+--------------------
 
 The application is based on Python [requests](https://pypi.org/project/requests) library that manages all of low-level request handling, which includes proxy support, so that opens up a possibility to test the connectivity to proxies as well. Proxy configuration is done using environment variables. Below is a mini-tutorial on querying the remote server through local SOCKS proxy, but it shall work with regular HTTP/S proxies as well.
 
 First let's create a file with request data, specifically -- with HTTP headers, as a lot of services are suspicious to the requests that came not from a regular browser, but from some custom software, and redirect them to some crazy captchas or just respond with 4XXs.
 
-File *"req1.http"*:
+*req1.http*
 ```http request
 GET http://2ip.ru
 User-Agent: curl/7.68.0
-Accept: */*
-Accept-Encoding: gzip
 ```
 
-Now, let's perform a direct request. I added some `-v` options to examine the actual response from the server, which should contain our external IP address. <small>*The main reason why I'm regularly using this service -- it's the fastest way to check your external IP address from literally everywhere with just a working terminal being required, and it's very easy to memorize: `curl 2ip.ru`*</small>.
+Now, let's perform a direct request. Some `-v` options were added to examine the actual response from the server, which should contain our external IP address.
+
+> <small><i>The main reason of my regular usage of this service is that it's the fastest way to check your real external IP address from literally everywhere with only one requirement (curl), and it's very easy to memorize: `curl 2ip.ru`</i></small>
+
+```bash
+$ macedon -T1 -vv -f req1.http 
+```
 
 ```console
-$ macedon -T1 -f req1.http -vvv
-...
-   200    16b  105ms  GET http://2ip.ru                                                                               
- [ 100% 1/1 ] [INFO ][macedon:#0](+201ms) Response #1 metadata: 200 {'Server': 'nginx', 'Date': 'Fri, 09 Jun 2023 14:44:23 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '16', 'Connection': 'keep-alive'}
-[TRACE][macedon:#0](+201ms) 
-Response #1 content:_____________________________________________________
-  0 |U+ 31 38 35 2E 32 34 33 2E 32 31 38 2E 31 35 32 0A |185.243.218.152↵
-----------------------------------------------------------------------(16)
- ...
+[INFO ][macedon:#0](+117ms) Request #1: GET http://2ip.ru
+[INFO ][macedon:#0](+338ms) Response #1: HTTP 200 OK
+[TRACE][macedon:#0](+339ms) 
+# [R/R 1]
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+> GET http://2ip.ru
+> User-Agent: curl/7.68.0
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+< HTTP 200 OK
+< Connection: keep-alive
+< Content-Length: 14
+< Content-Type: application/octet-stream
+< Date: Tue, 28 Nov 2023 18:32:35 GMT
+< Server: nginx
+
+185.243.218.152
 ```
 
 Direct requests work, yay. Next, to use a proxy server define the environment variables **HTTP_PROXY** and **HTTPS_PROXY** in the following format:
 
-```console
-$ export HTTP_PROXY="http://<user>:<pass>@<proxy>:<port>"
-$ export HTTPS_PROXY="http://<user>:<pass>@<proxy>:<port>"
+```bash
+$ export HTTP_PROXY="<protocol>://<user>:<pass>@<proxy>:<port>"
+$ export HTTPS_PROXY="<protocol>://<user>:<pass>@<proxy>:<port>"
 ```
 
 Needless to say that you shall put the real credentials instead of placeholders, but just in case... 
 
 Personally I prefer another method: prepending the command with an environment variable, which sets it as well, but for the one command only. Let's try it:
 
-```console
-
-$ HTTP_PROXY=socks5h://localhost:1080 macedon -f req1.http -vvv
-...
-  200    14b  964ms  GET http://2ip.ru                                                                               
- [ 100% 1/1 ] [INFO ][macedon:#0](+1.06s) Response #1 metadata: 200 {'Server': 'nginx', 'Date': 'Fri, 09 Jun 2023 14:49:24 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '14', 'Connection': 'keep-alive'}
-[TRACE][macedon:#0](+1.07s) 
-Response #1 content:_______________________________________________
-  0 |U+ 32 33 2e 31 32 39 2e 36 34 2e 31 33 32 0a |23.129.64.132↵  
----------------------------------------------------------------(14)
+```bash
+$ HTTP_PROXY=socks5h://localhost:1080 macedon -f req1.http -vv
 ```
-The service now sees that we made a request from another address and reflects that in his response. Furthermore,  the latency drastically increased from 105 ms to almost 1 second, which can also be considered as confirmation of successful proxying the request.
-
-There is also a possibility to encounter errors while attempting to connect through *SOCKS* proxy (*HTTP* proxies unaffected), which usually look like this: `[ERROR][macedon:#0](+92.9ms) Missing dependencies for SOCKS support` (*sigh*). Well, there is an easy solution for this: just install the missing depenedencies:
-
 ```console
-pipx inject macedon requests[socks]
+[INFO ][macedon:#0](+115ms) Request #1: GET http://2ip.ru
+[INFO ][macedon:#0](+1.24s) Response #1: HTTP 200 OK
+[TRACE][macedon:#0](+1.24s) 
+# [R/R 1]
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+> GET http://2ip.ru
+> User-Agent: curl/7.68.0
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+< HTTP 200 OK
+< Connection: keep-alive
+< Content-Length: 14
+< Content-Type: application/octet-stream
+< Date: Tue, 28 Nov 2023 18:51:01 GMT
+< Server: nginx
+
+23.129.64.132
+```
+The service now sees that we made a request from another address and reflects that in his response. Furthermore, the latency drastically increased (from ~200ms to more than 1s), which also indicates that request was sent through the proxy. 
+
+> <small><i>(logs context) The delay can be calculated from numbers in (parentheses) displaying elapsed time from the application launch.</i></small>
+
+Sometimes using *SOCKS* proxy causes errors (*HTTP(S)* proxies unaffected), which usually look like this: `[ERROR][...] Missing dependencies for SOCKS support` (*sigh*). The solution is to install the missing dependency, namely — `requests[socks]` which is an optional dependency and thus is not installed by default.
+
+#### With [pipx](https://github.com/pypa/pipx)
+```bash
+$ pipx inject macedon requests[socks]
 ```
 
-This is an optional dependency and due to this it's not installed by default. If `pipx` is not present, it's also can be done manually with `venv/bin/pip` (assuming the `virtualenv` is being used instead).
+#### Manually
+```bash
+$ ./venv/bin/pip install requests[socks]
+```
 
 
 ## Changelog

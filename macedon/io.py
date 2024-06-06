@@ -113,3 +113,6 @@ class IoProxy:
         if self._color:
             return pt.OutputMode.TRUE_COLOR
         return pt.OutputMode.NO_ANSI
+
+    def isatty(self) -> bool:
+        return self._io.isatty()
