@@ -162,13 +162,9 @@ build: ## Create new *public* build
 build: demolish-build
 	${VENV_PATH}/bin/python -m build
 
-publish: ## Upload last *public* build (=> PRIMARY registry)
-	${VENV_PATH}/bin/twine \
-	    upload \
-	    -u ${PYPI_USERNAME} \
-	    -p ${PYPI_PASSWORD} \
-	    --verbose \
-	    ${OUT_BUILD_RELEASE_PATH}/*
+publish: ## Upload last build (=> PRIMARY registry)   <hatch>
+	@[ -n "${SKIP_MODULE_UPLOAD}" ] && return 0
+	hatch -e build publish -u "${PYPI_USERNAME}" -a "${PYPI_PASSWORD}"
 
 install: ## > Install latest *public* build from PRIMARY registry
 	pipx install ${PROJECT_NAME_PUBLIC}

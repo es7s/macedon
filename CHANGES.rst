@@ -9,6 +9,11 @@ This project uses Semantic Versioning -- https://semver.org
 -----------
 *<current>*
 -----------
+- ...
+
+0.13.0
+------
+
 - 🌱 NEW: `--version` now considers if stdout is a tty
 - 🐞 FIX: panik on invalid schema url
 - 💎 REFACTOR: HTTP method defaults to `GET`
