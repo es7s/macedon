@@ -9,7 +9,10 @@ This project uses Semantic Versioning -- https://semver.org
 -----------
 *<current>*
 -----------
+- 🌱 NEW: `--version` now considers if stdout is a tty
 - 🐞 FIX: panik on invalid schema url
+- 💎 REFACTOR: HTTP method defaults to `GET`
+- 🧪 TESTS: refactor
 
 0.12.0
 ------
