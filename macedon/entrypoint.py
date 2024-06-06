@@ -165,7 +165,8 @@ class ClickCommand(click.Command):
     "mode_version",
     count=True,
     is_eager=True,
-    help="Show the version and exit. Specify twice (-VV) to see interpreter and entrypoint paths.",
+    help="Show the version and exit. Specify twice (-VV) to see interpreter and entrypoint paths. "
+    "If stdout is not a terminal, print only app version number without labels or timestamps.",
 )
 def callback(mode_version: bool, **kwargs):
     if mode_version:
@@ -205,6 +206,7 @@ def invoke_version(ctx: click.Context, value: int, **kwargs):
 
     vfmt = lambda s: pt.Fragment(s, "green")
     ufmt = lambda s: pt.Fragment(s, "gray")
+    tty = sys.stdout.isatty()
 
     regex = re.compile(R"(?m)([:Y]+)|([.&]+)|(\^+)|([▔▏]+)|([▁▕]+)|( *v)")
     prim_st = pt.Style(fg=pt.cvr.ICATHIAN_YELLOW)
@@ -231,13 +233,22 @@ def invoke_version(ctx: click.Context, value: int, **kwargs):
             result = result.replace(f, t)
         return result
 
-    pt.echo(regex.sub(replace, invoke_version.__doc__))
+    if tty:
+        pt.echo(regex.sub(replace, invoke_version.__doc__))
 
-    pt.echo(f"{APP_NAME:>12s}  {vfmt(APP_VERSION):<14s}  {ufmt(APP_UPDATED)}")
-    pt.echo(f"{'pytermor':>12s}  {vfmt(pt.__version__):<14s}  {ufmt(pt.__updated__)}")
-    pt.echo(
-        f"{'es7s-commons':>12s}  {vfmt(es7s_commons.PKG_VERSION):<14s}  {ufmt(es7s_commons.PKG_UPDATED)}"
+    pkgs = (
+        [APP_NAME, APP_VERSION, APP_UPDATED],
+        ["pytermor", pt.__version__, pt.__updated__],
+        ["es7s-commons", es7s_commons.PKG_VERSION, es7s_commons.PKG_UPDATED],
     )
+    if not tty:
+        pt.echo(pkgs[0][1])
+        return
+
+    for pkgname, pkgver, pkgupd in pkgs:
+        frags = [pkgname.rjust(12), pt.pad(2), vfmt(pkgver.ljust(14))]
+        frags += [pt.pad(2), ufmt(pkgupd)]
+        pt.echo(pt.Text(*frags))
 
     def _echo_path(label: str, path: str):
         pt.echo(
