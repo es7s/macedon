@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 #  macedon [CLI web service availability verifier]
-#  (c) 2022-2023 A. Shavykin <0.delameter@gmail.com>
+#  (c) 2022-2024 A. Shavykin <0.delameter@gmail.com>
 # -----------------------------------------------------------------------------
 import re
 import typing as t
@@ -15,7 +15,7 @@ from .logger import get_logger
 
 class FileParser:
     # language=regexp
-    METHOD_URL_REGEX = R"\s*([A-Z]+)\s+(https?://\S+)\s*"
+    METHOD_URL_REGEX = R"\s*([A-Z]+)?\s*(https?://\S+)\s*"
     # language=regexp
     HEADER_REGEX = R"\s*([a-zA-Z0-9_-]+):(.+)\s*"
 
@@ -27,8 +27,8 @@ class FileParser:
             raise RuntimeError(f"Failed to parse file '{file}'") from e
 
     def _parse(self, data: str, file_name: str) -> t.Iterable[Task]:
-        get_logger().trace(f"Parsing {file_name!r}" + '\n' + data)
-        
+        get_logger().trace(f"Parsing {file_name!r}" + "\n" + data)
+
         lines = [*pt.filterf([l.strip() for l in data.splitlines()])]
         if all(map(partial(re.fullmatch, self.METHOD_URL_REGEX), lines)):
             yield from self._parse_plain(lines)
@@ -72,14 +72,14 @@ class FileParser:
             if re.match(r"^\s*$", line):
                 last_empty_line_idx = idx
                 outp.append("")
-            outp.append(line)
+            outp.append(line.strip())
 
         return outp, last_empty_line_idx
 
     def _extract_method_url(self, line: str) -> tuple[str, str]:
-        if re.match(self.METHOD_URL_REGEX, line):
-            method, _, url = line.partition(" ")
-            return url, method
+        if m := re.match(self.METHOD_URL_REGEX, line):
+            method, url = m.groups()
+            return url, method or "GET"
         raise ValueError(f"Invalid format, expected '{{method}} http(s)?://{{url}}', got: {line!r}")
 
     def _extract_headers(self, lines: list[str]) -> t.Iterable[tuple[str, str]]:
